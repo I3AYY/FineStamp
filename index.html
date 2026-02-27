@@ -215,15 +215,23 @@
         .report-table th { background-color: #f3f4f6; color: #0f172a; border-bottom: 2px solid #475569; padding: 6px 4px; font-weight: bold; font-size: 13pt; text-align: left; }
         .report-table td { padding: 4px 4px; border-bottom: 1px solid #cbd5e1; line-height: 1.3; vertical-align: middle; }
         
+        /* --- ปรับแก้การสั่งพิมพ์ (Print CSS) --- */
         @media print {
             @page { size: A4 portrait; margin: 10mm; }
-            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+            /* ต้องปลดล็อก overflow ทั้งหมดใน body และ html เพื่อให้พิมพ์ได้หลายหน้า */
+            html, body { overflow: visible !important; height: auto !important; background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
             body > *:not(#reportModal) { display: none !important; }
             #bg-layer { display: none !important; }
-            #reportModal { display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: auto !important; background: white !important; z-index: 9999 !important; }
-            #reportControls, #reportFilters, #reportCloseBtn { display: none !important; }
-            #reportContent { background: white !important; padding: 0 !important; margin: 0 !important; display: block !important; overflow: visible !important; height: auto !important; }
-            .sheet-page { width: 100% !important; height: auto !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; page-break-after: always; }
+            
+            /* ปลดล็อก Modal ให้กลายเป็น Block ธรรมดาเพื่อให้แสดงได้เต็มความสูง */
+            #reportModal { display: block !important; position: relative !important; height: auto !important; max-height: none !important; overflow: visible !important; background: white !important; z-index: 9999 !important; }
+            #reportModal > div { height: auto !important; max-height: none !important; display: block !important; overflow: visible !important; box-shadow: none !important; border: none !important;}
+            #reportControls, #reportFilters { display: none !important; }
+            #reportContent { background: white !important; padding: 0 !important; margin: 0 !important; display: block !important; overflow: visible !important; height: auto !important; max-height: none !important; }
+            
+            /* กำหนดจุดตัดหน้ากระดาษให้กับ Sheet Page */
+            .sheet-page { width: 100% !important; height: auto !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+            .sheet-page:last-child { page-break-after: auto; break-after: auto; }
             .report-table th { background-color: #f3f4f6 !important; color: #000 !important; }
         }
         
@@ -243,6 +251,7 @@
         <p class="text-teal-700 dark:text-teal-400 font-semibold mt-4 animate-pulse">Processing...</p>
     </div>
 
+    <!-- Login Screen -->
     <div id="loginScreen" class="flex-grow flex items-center justify-center p-4 relative overflow-y-auto touch-scroll">
         <div class="glass-panel w-full max-w-sm rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-8 z-10 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
@@ -265,6 +274,7 @@
         </div>
     </div>
 
+    <!-- Main Screen -->
     <div id="mainScreen" class="flex-grow flex-col hidden overflow-hidden relative">
         <header class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm px-5 py-4 flex justify-between items-center z-10 border-b border-slate-100 dark:border-slate-700">
             <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -272,9 +282,6 @@
                     <div class="w-12 h-12 rounded-xl overflow-hidden shadow-md border-2 border-white dark:border-slate-600 ring-2 ring-teal-500/20">
                         <img id="userAvatarImg" src="" class="w-full h-full object-cover hidden">
                         <div id="userAvatarText" class="w-full h-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white flex items-center justify-center font-bold text-xl">U</div>
-                    </div>
-                    <div class="absolute inset-0 bg-black/20 rounded-xl hidden group-hover:flex items-center justify-center text-white text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
                     </div>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -357,7 +364,9 @@
         </footer>
     </div>
     
+    <!-- All Modals (Settings, Profile, Calendar, Register, CheckIn/Out, Report) are largely untouched visually -->
     <div id="settingsModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <!-- (Same code as original) -->
         <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm p-0 shadow-2xl overflow-hidden animate-slide-up">
             <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
                 <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -449,6 +458,7 @@
         </div>
     </div>
 
+    <!-- ... Other Modals ... -->
     <div id="profileModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
             <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4 text-center">เปลี่ยนรูปโปรไฟล์</h3>
@@ -465,7 +475,6 @@
             </div>
         </div>
     </div>
-
     <div id="calendarModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
         <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4">
@@ -527,6 +536,7 @@
     </div>
 
     <div id="checkInModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <!-- (Same code as original) -->
         <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-slide-up relative">
             <button onclick="$('#checkInModal').addClass('hidden')" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 text-2xl">&times;</button>
             <div class="mb-4">
@@ -583,6 +593,7 @@
     </div>
 
     <div id="checkOutModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <!-- (Same code as original) -->
         <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-slide-up relative">
              <button onclick="$('#checkOutModal').addClass('hidden')" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 text-2xl">&times;</button>
             <div class="mb-4">
@@ -655,6 +666,49 @@
         </div>
     </div>
 
+    <!-- Edit Record Modal (New) -->
+    <div id="editRecordModal" class="fixed inset-0 z-[80] hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-slide-up relative">
+            <button onclick="$('#editRecordModal').addClass('hidden')" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 text-2xl">&times;</button>
+            <div class="mb-4">
+                <span class="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Edit</span>
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">แก้ไขเวลา</h3>
+            </div>
+            <form id="editRecordForm" class="space-y-4">
+                <input type="hidden" id="editRecordId">
+                
+                <div class="bg-teal-50/50 dark:bg-teal-900/30 p-3 rounded-xl border border-teal-100/50 dark:border-teal-800">
+                    <label class="text-[10px] font-bold text-teal-600 uppercase block mb-2">เวลาเข้างาน</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="editInDate" class="w-full bg-white dark:bg-slate-700 border border-teal-100 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs text-slate-600 dark:text-white focus:border-teal-300 outline-none" required>
+                        <input type="time" id="editInTime" class="w-full bg-white dark:bg-slate-700 border border-teal-100 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs text-slate-600 dark:text-white focus:border-teal-300 outline-none" required>
+                    </div>
+                </div>
+
+                <div class="bg-rose-50/50 dark:bg-rose-900/30 p-3 rounded-xl border border-rose-100/50 dark:border-rose-800">
+                    <label class="text-[10px] font-bold text-rose-500 uppercase block mb-2">เวลาออกงาน</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="editOutDate" class="w-full bg-white dark:bg-slate-700 border border-rose-100 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs text-slate-600 dark:text-white focus:border-rose-300 outline-none">
+                        <input type="time" id="editOutTime" class="w-full bg-white dark:bg-slate-700 border border-rose-100 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs text-slate-600 dark:text-white focus:border-rose-300 outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-2">ประเภทงาน</label>
+                    <select id="editWorkType" class="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm text-slate-600 dark:text-white focus:border-indigo-300 outline-none">
+                        <!-- Options will be populated dynamically via JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="$('#editRecordModal').addClass('hidden')" class="flex-1 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg font-medium">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-bold shadow-lg shadow-amber-500/30">บันทึกการแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
     <div id="reportModal" class="fixed inset-0 z-[60] hidden bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-0 sm:p-4">
         <div class="bg-white dark:bg-slate-800 w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh] sm:rounded-2xl flex flex-col shadow-2xl">
             <div id="reportControls" class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900 sm:rounded-t-2xl">
@@ -756,13 +810,10 @@
         });
 
         // --- SETTINGS FUNCTIONS ---
-        function openSettingsModal() {
-            $('#settingsModal').removeClass('hidden');
-        }
+        function openSettingsModal() { $('#settingsModal').removeClass('hidden'); }
 
         function setHandedness(hand) {
             localStorage.setItem('fineStampHandedness', hand);
-            
             if (hand === 'left') {
                 $('#btnLeftHand').removeClass('bg-transparent text-slate-500').addClass('bg-white shadow-sm text-teal-600');
                 $('#btnRightHand').removeClass('bg-white shadow-sm text-teal-600').addClass('bg-transparent text-slate-500');
@@ -778,24 +829,12 @@
         
         function toggleDarkMode() {
             const isDark = $('#darkModeToggle').is(':checked');
-            if(isDark) {
-                $('html').addClass('dark');
-                localStorage.setItem('fineStampTheme', 'dark');
-            } else {
-                $('html').removeClass('dark');
-                localStorage.setItem('fineStampTheme', 'light');
-            }
+            if(isDark) { $('html').addClass('dark'); localStorage.setItem('fineStampTheme', 'dark'); } 
+            else { $('html').removeClass('dark'); localStorage.setItem('fineStampTheme', 'light'); }
         }
         
         function updateFontScale(val) {
-            const levels = {
-                '1': { scale: 0.85, label: 'เล็ก' },
-                '2': { scale: 0.925, label: 'ค่อนข้างเล็ก' },
-                '3': { scale: 1, label: 'ปกติ' },
-                '4': { scale: 1.075, label: 'ค่อนข้างใหญ่' },
-                '5': { scale: 1.15, label: 'ใหญ่' }
-            };
-            
+            const levels = { '1': { scale: 0.85, label: 'เล็ก' }, '2': { scale: 0.925, label: 'ค่อนข้างเล็ก' }, '3': { scale: 1, label: 'ปกติ' }, '4': { scale: 1.075, label: 'ค่อนข้างใหญ่' }, '5': { scale: 1.15, label: 'ใหญ่' } };
             const selected = levels[val];
             if(selected) {
                 document.documentElement.style.setProperty('--base-scale', selected.scale);
@@ -807,14 +846,9 @@
         function openChangePassword() {
             Swal.fire({
                 title: 'เปลี่ยนรหัสผ่านใหม่',
-                html: `
-                    <input type="password" id="swal-pass1" class="swal2-input" placeholder="รหัสผ่านใหม่">
-                    <input type="password" id="swal-pass2" class="swal2-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง">
-                `,
-                confirmButtonText: 'บันทึก',
-                focusConfirm: false,
-                showCancelButton: true,
-                cancelButtonText: 'ยกเลิก',
+                html: `<input type="password" id="swal-pass1" class="swal2-input" placeholder="รหัสผ่านใหม่">
+                       <input type="password" id="swal-pass2" class="swal2-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง">`,
+                confirmButtonText: 'บันทึก', focusConfirm: false, showCancelButton: true, cancelButtonText: 'ยกเลิก',
                 preConfirm: () => {
                     const p1 = document.getElementById('swal-pass1').value;
                     const p2 = document.getElementById('swal-pass2').value;
@@ -828,11 +862,8 @@
                     google.script.run.withSuccessHandler(res => {
                         $('#loading').addClass('hidden').removeClass('flex');
                         const response = JSON.parse(res);
-                        if(response.isOk) {
-                            Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success');
-                        } else {
-                            Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
-                        }
+                        if(response.isOk) { Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success'); } 
+                        else { Swal.fire('เกิดข้อผิดพลาด', response.message, 'error'); }
                     }).changePassword(currentUser.user_id, result.value);
                 }
             });
@@ -864,9 +895,7 @@
                     currentUser = response.user;
                     localStorage.setItem('fineStampUser', JSON.stringify(currentUser));
                     showMainScreen();
-                } else {
-                    Swal.fire({icon: 'error', title: 'Login Failed', text: response.message, confirmButtonColor: '#0d9488'});
-                }
+                } else { Swal.fire({icon: 'error', title: 'Login Failed', text: response.message, confirmButtonColor: '#0d9488'}); }
             }).loginUser($('#loginId').val(), $('#loginPass').val());
         });
 
@@ -892,7 +921,6 @@
             $('#userNameDisplay').text(`${currentUser.first_name} ${currentUser.last_name}`);
             $('#userGroupDisplay').text(currentUser.work_groups);
             
-            // Profile Image Logic
             if (currentUser.profile_image) {
                 $('#userAvatarText').addClass('hidden');
                 $('#userAvatarImg').attr('src', currentUser.profile_image).removeClass('hidden');
@@ -900,6 +928,8 @@
                 $('#userAvatarImg').addClass('hidden');
                 $('#userAvatarText').removeClass('hidden').text(currentUser.first_name.charAt(0));
             }
+            
+            if(currentUser.role === 'Admin') { $('#adminPanelBtn').removeClass('hidden'); }
             
             loadHistory();
         }
@@ -932,38 +962,25 @@
                     $('#regModal').addClass('hidden');
                     Swal.fire({icon:'success', title:'สำเร็จ', text:'ลงทะเบียนเรียบร้อย', confirmButtonColor: '#0d9488'});
                     $('#regForm')[0].reset();
-                } else {
-                    Swal.fire({icon:'error', title:'Error', text:response.message, confirmButtonColor: '#0d9488'});
-                }
+                } else { Swal.fire({icon:'error', title:'Error', text:response.message, confirmButtonColor: '#0d9488'}); }
             }).registerUser(JSON.stringify(payload));
         });
 
-        // --- CALENDAR LOGIC ---
+        // --- CALENDAR LOGIC (Same as original) ---
         function openCalendarModal() {
             currentCalDate = new Date();
             renderCalendar();
-            
-            // Dynamic Legend
             const legendContainer = $('#calendarLegend');
             legendContainer.empty();
             const isCP = currentUser.work_groups.includes(DEPT_CP);
             const isAP = currentUser.work_groups.includes(DEPT_AP);
 
-            if (isCP) {
-                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-600"></span> เจาะเลือด</span>');
-                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600"></span> แล็บ</span>');
-            }
-            if (isAP) {
-                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-600"></span> HPV</span>');
-            }
-
+            if (isCP) { legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-600"></span> เจาะเลือด</span>'); legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600"></span> แล็บ</span>'); }
+            if (isAP) { legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-600"></span> HPV</span>'); }
             $('#calendarModal').removeClass('hidden');
         }
 
-        function changeMonth(step) {
-            currentCalDate.setMonth(currentCalDate.getMonth() + step);
-            renderCalendar();
-        }
+        function changeMonth(step) { currentCalDate.setMonth(currentCalDate.getMonth() + step); renderCalendar(); }
 
         function renderCalendar() {
             const m = currentCalDate.getMonth();
@@ -985,11 +1002,7 @@
         function drawGrid(firstDay, daysInMonth, m, y) {
             const grid = $('#calendarGrid');
             grid.empty();
-            
-            // Empty slots for start
-            for (let i = 0; i < firstDay; i++) {
-                grid.append('<div class="calendar-day empty-day"></div>');
-            }
+            for (let i = 0; i < firstDay; i++) { grid.append('<div class="calendar-day empty-day"></div>'); }
 
             const today = new Date();
             const isCurrentMonth = today.getMonth() === m && today.getFullYear() === y;
@@ -999,21 +1012,12 @@
                 const duty = dutyRecords.find(r => r.date === dateKey);
                 const isToday = isCurrentMonth && today.getDate() === d;
                 
-                // Determine Day Type (Weekend/Holiday)
                 const currentDayOfWeek = new Date(y, m, d).getDay();
                 let dayClass = "";
                 let holidayHtml = "";
                 
-                // 1. Weekend Logic
-                if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
-                    dayClass = "day-weekend";
-                }
-                
-                // 2. Holiday Logic (Overrides weekend color due to CSS specificity or ordering, but adding class anyway)
-                if (thaiHolidays[dateKey]) {
-                    dayClass += " day-holiday"; // Append class
-                    holidayHtml = `<div class="holiday-label">${thaiHolidays[dateKey]}</div>`;
-                }
+                if (currentDayOfWeek === 0 || currentDayOfWeek === 6) { dayClass = "day-weekend"; }
+                if (thaiHolidays[dateKey]) { dayClass += " day-holiday"; holidayHtml = `<div class="holiday-label">${thaiHolidays[dateKey]}</div>`; }
 
                 let dotsHtml = '';
                 if (duty) {
@@ -1036,12 +1040,9 @@
                 grid.append(dayEl);
             }
 
-            // Fill remaining slots to maintain 42 grid cells (6 rows * 7 cols) for consistent height
             const totalCellsFilled = firstDay + daysInMonth;
             const remainingCells = 42 - totalCellsFilled;
-            for(let i=0; i<remainingCells; i++) {
-                 grid.append('<div class="calendar-day empty-day"></div>');
-            }
+            for(let i=0; i<remainingCells; i++) { grid.append('<div class="calendar-day empty-day"></div>'); }
         }
 
         function openShiftSelect(dateStr) {
@@ -1051,17 +1052,11 @@
             
             const duty = dutyRecords.find(r => r.date === dateStr);
             const currentShifts = duty ? duty.shifts : [];
-
             const isCP = currentUser.work_groups.includes(DEPT_CP);
             const isAP = currentUser.work_groups.includes(DEPT_AP);
 
-            if (isCP) {
-                container.append(createCheckbox('เจาะเลือดเช้า', currentShifts));
-                container.append(createCheckbox('เวรแล็บ', currentShifts));
-            }
-            if (isAP) {
-                container.append(createCheckbox('เวร HPV', currentShifts));
-            }
+            if (isCP) { container.append(createCheckbox('เจาะเลือดเช้า', currentShifts)); container.append(createCheckbox('เวรแล็บ', currentShifts)); }
+            if (isAP) { container.append(createCheckbox('เวร HPV', currentShifts)); }
 
             $('#calShiftModal').removeClass('hidden');
             $('#calShiftModal').data('date', dateStr);
@@ -1069,20 +1064,16 @@
 
         function createCheckbox(label, currentShifts) {
             const isChecked = currentShifts.includes(label) ? 'checked' : '';
-            return `
-                <label class="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
-                    <input type="checkbox" value="${label}" ${isChecked} class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
-                    <span class="text-sm text-slate-700 dark:text-slate-300">${label}</span>
-                </label>
-            `;
+            return `<label class="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+                        <input type="checkbox" value="${label}" ${isChecked} class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">${label}</span>
+                    </label>`;
         }
 
         function saveShift() {
             const dateStr = $('#calShiftModal').data('date');
             const selected = [];
-            $('#calShiftOptions input:checked').each(function() {
-                selected.push($(this).val());
-            });
+            $('#calShiftOptions input:checked').each(function() { selected.push($(this).val()); });
 
             const payload = { user_id: currentUser.user_id, date: dateStr, shifts: selected };
             
@@ -1091,20 +1082,13 @@
             
             google.script.run.withSuccessHandler(res => {
                 const response = JSON.parse(res);
-                if(response.isOk) {
-                    renderCalendar();
-                } else {
-                    Swal.fire({icon:'error', title:'Error', text:response.message});
-                    $('#loading').addClass('hidden').removeClass('flex');
-                }
+                if(response.isOk) { renderCalendar(); } else { Swal.fire({icon:'error', title:'Error', text:response.message}); $('#loading').addClass('hidden').removeClass('flex'); }
             }).saveDutyRecord(JSON.stringify(payload));
         }
 
         // --- PROFILE IMAGE ---
         function openProfileModal() {
             $('#profileInput').val(''); 
-
-            // ตรวจสอบรูป User
             if (currentUser && currentUser.profile_image) {
                 $('#previewImg').attr('src', currentUser.profile_image).removeClass('hidden');
                 $('#previewPlaceholder').addClass('hidden');
@@ -1112,7 +1096,6 @@
                 $('#previewImg').addClass('hidden');
                 $('#previewPlaceholder').removeClass('hidden');
             }
-
             $('#profileModal').removeClass('hidden');
         }
 
@@ -1145,9 +1128,7 @@
                         showMainScreen();
                         $('#profileModal').addClass('hidden');
                         Swal.fire({icon:'success', title:'บันทึกรูปโปรไฟล์เรียบร้อย', showConfirmButton: false, timer: 1500});
-                    } else {
-                        Swal.fire({icon:'error', title:'Error', text: response.message});
-                    }
+                    } else { Swal.fire({icon:'error', title:'Error', text: response.message}); }
                 }).saveProfileImage(currentUser.user_id, base64);
             }
         }
@@ -1158,12 +1139,8 @@
             groupSelect.empty();
             groupSelect.append('<option value="" disabled selected>เลือกกลุ่มงาน</option>');
             
-            if (currentUser.work_groups.includes(DEPT_AP)) {
-                groupSelect.append(new Option(DEPT_AP, DEPT_AP));
-            }
-            if (currentUser.work_groups.includes(DEPT_CP)) {
-                groupSelect.append(new Option(DEPT_CP, DEPT_CP));
-            }
+            if (currentUser.work_groups.includes(DEPT_AP)) { groupSelect.append(new Option(DEPT_AP, DEPT_AP)); }
+            if (currentUser.work_groups.includes(DEPT_CP)) { groupSelect.append(new Option(DEPT_CP, DEPT_CP)); }
             if (groupSelect.children('option').length === 2) {
                 groupSelect.find('option:eq(1)').prop('selected', true);
                 groupSelect.trigger('change');
@@ -1172,22 +1149,16 @@
             const userSelectContainer = $('#reportUserContainer');
             const userSelect = $('#reportUser');
             
-            if (currentUser.role === 'Admin') {
-                userSelectContainer.removeClass('hidden');
-            } else {
-                userSelectContainer.addClass('hidden');
-                userSelect.empty(); 
-            }
+            if (currentUser.role === 'Admin') { userSelectContainer.removeClass('hidden'); } 
+            else { userSelectContainer.addClass('hidden'); userSelect.empty(); }
 
             $('#reportModal').removeClass('hidden');
         }
 
         $('#reportGroup').change(function() {
             if (currentUser.role !== 'Admin') return;
-            
             const selectedGroup = $(this).val();
             const userSelect = $('#reportUser');
-            
             userSelect.empty();
             userSelect.append('<option value="ALL">กำลังโหลด...</option>');
             userSelect.prop('disabled', true);
@@ -1196,9 +1167,7 @@
                 const users = JSON.parse(res);
                 userSelect.empty();
                 userSelect.append('<option value="ALL">รวมทุกคน</option>');
-                users.forEach(u => {
-                    userSelect.append(new Option(u.name, u.user_id));
-                });
+                users.forEach(u => { userSelect.append(new Option(u.name, u.user_id)); });
                 userSelect.prop('disabled', false);
             }).getUsersByGroup(selectedGroup);
         });
@@ -1211,11 +1180,8 @@
             const y = $('#reportYear').val();
             
             let userIdToFilter = "";
-            if (currentUser.role === 'Admin') {
-                userIdToFilter = $('#reportUser').val() || "ALL";
-            } else {
-                userIdToFilter = currentUser.user_id; 
-            }
+            if (currentUser.role === 'Admin') { userIdToFilter = $('#reportUser').val() || "ALL"; } 
+            else { userIdToFilter = currentUser.user_id; }
 
             $('#loading').removeClass('hidden').addClass('flex');
             google.script.run.withSuccessHandler(res => {
@@ -1225,7 +1191,6 @@
                     globalReportData = response.data;
                     globalReportMonth = $("#reportMonth option:selected").text();
                     globalReportYear = parseInt(y) + 543;
-
                     renderReportPages(response.data, m, y); 
                 } 
                 else { Swal.fire({icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message}); }
@@ -1299,40 +1264,20 @@
             const header = ["วัน เดือน ปี", "ชื่อ สกุล", "เวลามา", "เวลากลับ", "ลายมือชื่อ"];
 
             const dataRows = globalReportData.map(row => {
-                return [
-                    row.date,          // Col A: วันที่
-                    row.name,          // Col B: ชื่อ
-                    row.in,            // Col C: เวลามา
-                    row.out,           // Col D: เวลากลับ
-                    row.name.split(' ')[0] // Col E: ลายเซ็น (ชื่อต้น)
-                ];
+                return [ row.date, row.name, row.in, row.out, row.name.split(' ')[0] ];
             });
 
-            const finalData = [
-                title1,
-                title2,
-                [], 
-                header,
-                ...dataRows
-            ];
-
+            const finalData = [ title1, title2, [], header, ...dataRows ];
             const ws = XLSX.utils.aoa_to_sheet(finalData);
 
             if(!ws['!merges']) ws['!merges'] = [];
             ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }); 
             ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }); 
 
-            ws['!cols'] = [
-                { wch: 20 }, // A
-                { wch: 25 }, // B
-                { wch: 10 }, // C
-                { wch: 10 }, // D
-                { wch: 15 }  // E
-            ];
+            ws['!cols'] = [ { wch: 20 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 15 } ];
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Report");
-            
             const filename = `FineStamp_Report_${globalReportMonth}_${globalReportYear}.xlsx`;
             XLSX.writeFile(wb, filename);
         }
@@ -1394,8 +1339,8 @@
                     : `<span class="text-orange-400 text-xs italic">Pending</span>`;
 
                 const html = `
-                    <div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700 last:border-0 flex justify-between items-center animate-[fadeIn_0.3s_ease-out]">
-                        <div>
+                    <div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700 last:border-0 flex flex-col sm:flex-row sm:justify-between sm:items-center animate-[fadeIn_0.3s_ease-out]">
+                        <div class="mb-2 sm:mb-0">
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="font-bold text-slate-700 dark:text-slate-200">${rec.clock_in_date}</span>
                                 ${workTypeBadge}
@@ -1406,12 +1351,101 @@
                                 ออก: <span class="font-semibold text-slate-600 dark:text-slate-300">${rec.clock_out_time || '-'}</span>
                             </div>
                         </div>
-                        <div class="text-right">
-                           ${clockOutDisplay}
+                        <div class="flex items-center gap-3 sm:justify-end justify-between border-t border-slate-100 sm:border-0 pt-2 sm:pt-0 dark:border-slate-700">
+                            ${clockOutDisplay}
+                            <div class="flex gap-1">
+                                <button onclick="openEditRecordModal('${rec.id}')" class="text-amber-500 hover:bg-amber-50 dark:hover:bg-slate-600 p-1.5 rounded-lg transition" title="แก้ไข">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <button onclick="deleteRecord('${rec.id}')" class="text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-600 p-1.5 rounded-lg transition" title="ลบ">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
                 list.append(html);
+            });
+        }
+
+        // --- EDIT & DELETE RECORD ---
+        function openEditRecordModal(recordId) {
+            const rec = userRecords.find(r => r.id === recordId);
+            if(!rec) return;
+
+            $('#editRecordId').val(rec.id);
+            $('#editInDate').val(rec.clock_in_date);
+            $('#editInTime').val(rec.clock_in_time);
+            $('#editOutDate').val(rec.clock_out_date || "");
+            $('#editOutTime').val(rec.clock_out_time || "");
+            
+            // --- NEW: Dynamic Dropdown Logic based on work_groups ---
+            const editWorkTypeSelect = $('#editWorkType');
+            editWorkTypeSelect.empty(); 
+            editWorkTypeSelect.append('<option value="">ปกติ</option>'); 
+
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+
+            if (isCP) {
+                editWorkTypeSelect.append('<option value="เจาะเลือดเช้า">เจาะเลือดเช้า</option>');
+                editWorkTypeSelect.append('<option value="เวรแล็บ">เวรแล็บ</option>');
+            }
+            if (isAP) {
+                editWorkTypeSelect.append('<option value="เวร HPV">เวร HPV</option>');
+            }
+
+            // ตั้งค่า Select Option
+            if(rec.work_type === "") $('#editWorkType').val("");
+            else $('#editWorkType').val(rec.work_type);
+
+            $('#editRecordModal').removeClass('hidden');
+        }
+
+        $('#editRecordForm').submit(function(e) {
+            e.preventDefault();
+            const recordId = $('#editRecordId').val();
+            let workType = $('#editWorkType').val();
+
+            const payload = {
+                id: recordId,
+                clock_in_date: $('#editInDate').val(),
+                clock_in_time: $('#editInTime').val(),
+                clock_out_date: $('#editOutDate').val(),
+                clock_out_time: $('#editOutTime').val(),
+                work_type: workType,
+                is_manual_edit: true // ใช้แยกเพื่อส่ง Telegram ว่าเป็นการแก้ไข
+            };
+            
+            saveRecord(payload, '#editRecordModal');
+        });
+
+        function deleteRecord(recordId) {
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: "หากลบแล้วจะไม่สามารถกู้คืนได้!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'ใช่, ลบเลย!',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#loading').removeClass('hidden').addClass('flex');
+                    const payload = { record_id: recordId, user_id: currentUser.user_id };
+                    
+                    google.script.run.withSuccessHandler(res => {
+                        $('#loading').addClass('hidden').removeClass('flex');
+                        const response = JSON.parse(res);
+                        if(response.isOk) {
+                            Swal.fire({icon: 'success', title: 'ลบสำเร็จ', showConfirmButton: false, timer: 1000});
+                            loadHistory();
+                        } else {
+                            Swal.fire('Error', response.message, 'error');
+                        }
+                    }).deleteTimeRecord(JSON.stringify(payload));
+                }
             });
         }
 
@@ -1421,7 +1455,6 @@
             if(!container) return;
             const form = $(formId);
 
-            // Clean up old events to prevent memory leak and double-fire
             if(container.cleanup) container.cleanup();
 
             const thumb = container.querySelector('.v-slider-thumb');
@@ -1448,7 +1481,7 @@
                 isDragging = true;
                 startY = e.type.includes('mouse') ? e.pageY : e.touches[0].clientY;
                 let containerHeight = container.offsetHeight;
-                maxSlide = containerHeight - thumb.offsetHeight - 8; // 8 is top+bottom padding (4px each)
+                maxSlide = containerHeight - thumb.offsetHeight - 8; 
                 
                 thumb.style.transition = 'none';
                 fill.style.transition = 'none';
@@ -1460,17 +1493,14 @@
                 let moveY = pageY - startY;
 
                 if (direction === 'up') {
-                    // moveY is negative when moving up
                     if (moveY > 0) moveY = 0;
                     if (moveY < -maxSlide) moveY = -maxSlide;
                 } else {
-                    // moveY is positive when moving down
                     if (moveY < 0) moveY = 0;
                     if (moveY > maxSlide) moveY = maxSlide;
                 }
 
                 thumb.style.transform = `translateY(${moveY}px)`;
-                
                 const progress = Math.abs(moveY) / maxSlide;
                 fill.style.height = `${Math.abs(moveY) + (thumb.offsetHeight/2)}px`; 
                 text.style.opacity = 1 - (progress * 1.5);
@@ -1486,20 +1516,15 @@
                     thumb.style.transform = `translateY(${finalPos}px)`;
                     fill.style.height = '100%';
                     
-                    if(direction === 'up') {
-                        thumb.style.backgroundColor = '#059669'; 
-                    } else {
-                        thumb.style.backgroundColor = '#e11d48'; 
-                    }
+                    if(direction === 'up') { thumb.style.backgroundColor = '#059669'; } 
+                    else { thumb.style.backgroundColor = '#e11d48'; }
                     thumb.querySelector('svg').style.color = 'white';
                     
                     setTimeout(() => {
                         form.trigger('submit');
                         setTimeout(resetSlider, 1000); 
                     }, 250);
-                } else {
-                    resetSlider();
-                }
+                } else { resetSlider(); }
             }
 
             thumb.addEventListener('mousedown', onStart);
@@ -1513,7 +1538,6 @@
             document.addEventListener('mouseup', globalOnEnd);
             document.addEventListener('touchend', globalOnEnd);
             
-            // Attached cleanup function to the container element
             container.cleanup = () => {
                 thumb.removeEventListener('mousedown', onStart);
                 thumb.removeEventListener('touchstart', onStart);
@@ -1539,9 +1563,7 @@
                 $('input[name="workTypeIn"]').prop('checked', false); 
                 if (isCP) $('input[name="workTypeIn"][value="เจาะเลือดเช้า"]').prop('checked', true);
                 else if (isAP) $('input[name="workTypeIn"][value="เวร HPV"]').prop('checked', true);
-            } else {
-                $('#checkInWorkTitle, #checkInWorkOptionsInner').addClass('hidden');
-            }
+            } else { $('#checkInWorkTitle, #checkInWorkOptionsInner').addClass('hidden'); }
             
             const oldSlider = document.getElementById('checkInSlider');
             if(oldSlider.cleanup) oldSlider.cleanup();
@@ -1549,7 +1571,6 @@
             oldSlider.parentNode.replaceChild(newSlider, oldSlider);
             
             setupVerticalSlider('checkInSlider', '#checkInForm', 'up');
-
             $('#checkInModal').removeClass('hidden');
         }
 
@@ -1583,9 +1604,7 @@
                  $('input[name="workTypeOut"]').prop('checked', false);
                  if (isCP) $('input[name="workTypeOut"][value="เจาะเลือดเช้า"]').prop('checked', true);
                  else if (isAP) $('input[name="workTypeOut"][value="เวร HPV"]').prop('checked', true);
-            } else {
-                $('#checkOutWorkTitle, #checkOutWorkOptionsInner').addClass('hidden');
-            }
+            } else { $('#checkOutWorkTitle, #checkOutWorkOptionsInner').addClass('hidden'); }
 
             const oldSlider = document.getElementById('checkOutSlider');
             if(oldSlider.cleanup) oldSlider.cleanup();
@@ -1593,7 +1612,6 @@
             oldSlider.parentNode.replaceChild(newSlider, oldSlider);
             
             setupVerticalSlider('checkOutSlider', '#checkOutForm', 'down');
-
             $('#checkOutModal').removeClass('hidden');
         }
 
@@ -1663,9 +1681,7 @@
                         Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1000 });
                         loadHistory();
                     }, 300);
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
-                }
+                } else { Swal.fire({ icon: 'error', title: 'Error', text: response.message }); }
             }).saveTimeRecord(JSON.stringify(fullPayload));
         }
     </script>
