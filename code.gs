@@ -99,35 +99,30 @@ function saveProfileImage(userId, base64Data) {
     const sheet = ss.getSheetByName(SHEET_USERS);
     const data = sheet.getDataRange().getDisplayValues();
    
-    // 1. ค้นหา User และเตรียมลบรูปเก่า (ถ้ามี)
     let rowIndex = -1;
     let oldFileUrl = "";
    
     for (let i = 1; i < data.length; i++) {
       if (data[i][1] == userId) {
-        rowIndex = i + 1; // แถวใน Sheet (เริ่มที่ 1)
-        oldFileUrl = data[i][9]; // Column J (Index 9)
+        rowIndex = i + 1; 
+        oldFileUrl = data[i][9]; 
         break;
       }
     }
 
     if (rowIndex === -1) return JSON.stringify({ isOk: false, message: "User not found" });
 
-    // ลบไฟล์เก่าทิ้ง (ถ้ามี URL และเป็นไฟล์ใน Drive)
     if (oldFileUrl && oldFileUrl.includes("drive.google.com")) {
       try {
-        // ดึง ID จาก URL: https://drive.google.com/thumbnail?id=xxxxx&sz=s400
         const idMatch = oldFileUrl.match(/id=([^&]+)/);
         if (idMatch && idMatch[1]) {
-          DriveApp.getFileById(idMatch[1]).setTrashed(true); // ย้ายลงถังขยะ
+          DriveApp.getFileById(idMatch[1]).setTrashed(true); 
         }
       } catch (err) {
-        // ถ้าหาไฟล์ไม่เจอ หรือลบไม่ได้ ให้ข้ามไป (ไม่ต้อง Error)
         console.log("Delete old file error: " + err);
       }
     }
 
-    // 2. สร้างไฟล์ใหม่
     const folderName = "FineStamp_Profiles";
     const folders = DriveApp.getFoldersByName(folderName);
     let folder;
@@ -136,14 +131,12 @@ function saveProfileImage(userId, base64Data) {
 
     const contentType = base64Data.substring(5, base64Data.indexOf(';'));
     const bytes = Utilities.base64Decode(base64Data.substr(base64Data.indexOf('base64,')+7));
-    // ตั้งชื่อไฟล์ให้ไม่ซ้ำด้วย Timestamp
     const blob = Utilities.newBlob(bytes, contentType, `profile_${userId}_${Date.now()}.jpg`);
     const file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
    
-    // 3. อัปเดต URL ใหม่ลง Sheet
     const fileUrl = `https://drive.google.com/thumbnail?id=${file.getId()}&sz=s400`;
-    sheet.getRange(rowIndex, 10).setValue(fileUrl); // Column J
+    sheet.getRange(rowIndex, 10).setValue(fileUrl); 
 
     return JSON.stringify({ isOk: true, url: fileUrl });
 
@@ -153,13 +146,16 @@ function saveProfileImage(userId, base64Data) {
 }
 
 // --- Records Management ---
-function getUserRecords(userId) {
+function getUserRecords(userId, month, year) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_RECORDS);
   if (!sheet) return JSON.stringify([]);
+  
   const data = sheet.getDataRange().getValues();
   const tz = Session.getScriptTimeZone();
   const records = [];
+  
+  // ใช้เดือน/ปี เพื่อดึงประวัติเฉพาะเดือนปัจจุบัน (ช่วยให้โหลดเร็วขึ้น)
   for (let i = data.length - 1; i >= 1; i--) {
     const row = data[i];
     if (String(row[1]) === String(userId)) {
@@ -167,6 +163,7 @@ function getUserRecords(userId) {
         id: row[0],
         clock_in_date: _formatDateForHtml(row[5], tz),
         clock_in_time: _formatTimeForHtml(row[6], tz),
+        clock_out_date: _formatDateForHtml(row[7], tz),
         clock_out_time: _formatTimeForHtml(row[8], tz),
         work_type: row[9]
       });
@@ -205,7 +202,7 @@ function saveTimeRecord(payload) {
     let finalClockInTime = rec.clock_in_time;
     let finalWorkType = rec.work_type;
 
-    if (rowIndex !== -1 && existingRow) {
+    if (rowIndex !== -1 && existingRow && !rec.is_manual_edit) {
         if (!finalClockInDate) finalClockInDate = _formatDateForHtml(existingRow[5], tz);
         if (!finalClockInTime) finalClockInTime = _formatTimeForHtml(existingRow[6], tz);
         if (!finalWorkType) finalWorkType = existingRow[9];
@@ -228,37 +225,35 @@ function saveTimeRecord(payload) {
       sheet.appendRow(stringRowData);
     }
 
-// --- TELEGRAM NOTIFY LOGIC (NEW) ---
-    // ตั้งค่าเริ่มต้น
-    let icon = "🔵"; // สีน้ำเงิน (เข้างาน)
+    // --- TELEGRAM NOTIFY LOGIC ---
+    let icon = "🔵"; 
     let title = "ลงเวลาเข้างาน";
     let nameDisplay = `${rec.first_name} ${rec.last_name}`;
-    let workTypeDisplay = rec.work_type || "-";
-    let timeInDisplay = rec.clock_in_time ? `${rec.clock_in_time} น.` : "-";
+    let workTypeDisplay = finalWorkType || "-";
+    let timeInDisplay = finalClockInTime ? `${finalClockInTime} น.` : "-";
     let timeOutDisplay = "";
 
-    // --- กำหนดเงื่อนไขการแสดงผล ---
-    
-    // กรณีที่ 1: งาน "เจาะเลือดเช้า" (กรณีพิเศษ: เข้างานแต่มีเวลาออกเลย)
-    if (rec.work_type === "เจาะเลือดเช้า") {
-        icon = "🟢"; // สีเขียว (ครบทั้งเข้างานและออกงาน)
+    if (rec.is_manual_edit) {
+        icon = "✏️";
+        title = "แก้ไขเวลาปฏิบัติงาน";
+        timeOutDisplay = rec.clock_out_time ? `${rec.clock_out_time} น.` : "-";
+    }
+    else if (rec.work_type === "เจาะเลือดเช้า") {
+        icon = "🟢"; 
         title = "ลงเวลาเข้า-ออกงาน";
         timeOutDisplay = rec.clock_out_time ? `${rec.clock_out_time} น.` : "08:00 น.";
     } 
-    // กรณีที่ 2: กดออกงานทั่วไป (มีเวลาออก และไม่ใช่งานเจาะเลือดที่เพิ่งกดเข้า)
     else if (rec.clock_out_time && rec.clock_out_time.trim() !== "") {
-        icon = "🔴"; // สีแดง (ออกงาน)
+        icon = "🔴"; 
         title = "ลงเวลาออกงาน";
         timeOutDisplay = `${rec.clock_out_time} น.`;
     } 
-    // กรณีที่ 3: กดเข้างานทั่วไป (เวรแล็บ, HPV - ยังไม่มีเวลาออก)
     else {
-        icon = "🔵"; // สีน้ำเงิน (เข้างาน)
+        icon = "🔵"; 
         title = "ลงเวลาเข้างาน";
-        timeOutDisplay = "<i>..............</i>"; // ข้อความแทนเวลาออก
+        timeOutDisplay = "<i>..............</i>"; 
     }
 
-    // สร้างข้อความ HTML
     const msg = `<b>${icon} ${title}</b>\n` +
                 `➖➖➖➖➖➖➖➖➖➖\n` +
                 `👤 <b>ชื่อ-สกุล:</b>  ${nameDisplay}\n` +
@@ -266,11 +261,45 @@ function saveTimeRecord(payload) {
                 `🕐 <b>เวลามา:</b>      ${timeInDisplay}\n` +
                 `🏁 <b>เวลากลับ:</b>   ${timeOutDisplay}`;
     
-    // ส่งเข้า Telegram
     sendTelegramMsg(msg);
     // ------------------------------------
 
     return JSON.stringify({ isOk: true, record: rec });
+  } catch (e) {
+    return JSON.stringify({ isOk: false, message: e.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteTimeRecord(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const data = JSON.parse(payload);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECORDS);
+    
+    if (!sheet) return JSON.stringify({ isOk: false, message: "Sheet not found." });
+
+    const allData = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    // ค้นหาแถวที่ตรงกับ Record ID และ User ID (ป้องกันลบของคนอื่น)
+    for (let i = 1; i < allData.length; i++) {
+      if (String(allData[i][0]) === String(data.record_id) && String(allData[i][1]) === String(data.user_id)) {
+        rowIndex = i + 1; // บวก 1 เพราะอาร์เรย์เริ่มที่ 0 แต่ชีตเริ่มที่ 1
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      sheet.deleteRow(rowIndex);
+      return JSON.stringify({ isOk: true });
+    } else {
+      return JSON.stringify({ isOk: false, message: "ไม่พบข้อมูล หรือคุณไม่มีสิทธิ์ลบรายการนี้" });
+    }
+
   } catch (e) {
     return JSON.stringify({ isOk: false, message: e.toString() });
   } finally {
@@ -287,15 +316,13 @@ function getMonthDuty(userId, month, year) {
   const data = sheet.getDataRange().getValues();
   const results = [];
  
-  // Convert month/year to check
   const targetM = parseInt(month, 10);
   const targetY = parseInt(year, 10);
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (String(row[1]) !== String(userId)) continue; // Check User ID
+    if (String(row[1]) !== String(userId)) continue; 
 
-    // Parse Date
     let dObj = null;
     if (row[2] instanceof Date) dObj = row[2];
     else if (typeof row[2] === 'string') dObj = new Date(row[2]);
@@ -304,7 +331,7 @@ function getMonthDuty(userId, month, year) {
       if ((dObj.getMonth() + 1) === targetM && dObj.getFullYear() === targetY) {
         results.push({
           date: Utilities.formatDate(dObj, "GMT+7", "yyyy-MM-dd"),
-          shifts: row[3] ? row[3].split(',') : [] // shift_type stored as comma separated
+          shifts: row[3] ? row[3].split(',') : []
         });
       }
     }
@@ -323,11 +350,10 @@ function saveDutyRecord(payload) {
       sheet.appendRow(["id", "user_id", "shift_date", "shift_type", "created_at"]);
     }
 
-    const data = JSON.parse(payload); // { user_id, date, shifts: [] }
+    const data = JSON.parse(payload); 
     const allData = sheet.getDataRange().getValues();
     const targetDateStr = data.date;
    
-    // Find existing row for this user & date
     let rowIndex = -1;
     for (let i = 1; i < allData.length; i++) {
       let dStr = "";
@@ -344,15 +370,13 @@ function saveDutyRecord(payload) {
     const now = new Date();
 
     if (rowIndex !== -1) {
-      // Update or Delete (if empty)
       if (data.shifts.length === 0) {
         sheet.deleteRow(rowIndex);
       } else {
-        sheet.getRange(rowIndex, 4).setValue(shiftStr); // Update shift_type
-        sheet.getRange(rowIndex, 5).setValue(now); // Update timestamp
+        sheet.getRange(rowIndex, 4).setValue(shiftStr); 
+        sheet.getRange(rowIndex, 5).setValue(now); 
       }
     } else {
-      // Create new
       if (data.shifts.length > 0) {
         sheet.appendRow([
           'D_' + Date.now(),
@@ -435,14 +459,12 @@ function getMonthlyReport(monthStr, yearStr, targetGroup, targetUserId) {
       let includeRecord = false;
 
       if (targetGroup === GROUP_CP) {
-        // CP: เอา "เจาะเลือดเช้า", "เวรแล็บ" หรือ "ค่าว่าง" (งานปกติ)
         if (workType === "เจาะเลือดเช้า" || workType === "เวรแล็บ") {
           includeRecord = true;
         } else if (workType === "" && recordGroup.includes(GROUP_CP)) {
           includeRecord = true;
         }
       } else if (targetGroup === GROUP_AP) {
-        // AP: เอา "เวร HPV" หรือ "ค่าว่าง" (งานปกติ)
         if (workType === "เวร HPV") {
           includeRecord = true;
         } else if (workType === "" && recordGroup.includes(GROUP_AP)) {
@@ -499,7 +521,7 @@ function getMonthlyReport(monthStr, yearStr, targetGroup, targetUserId) {
   }
 }
 
-// --- User Profile Management (เพิ่มส่วนนี้ต่อท้ายไฟล์) ---
+// --- User Profile Management ---
 function changePassword(userId, newPassword) {
   const lock = LockService.getScriptLock();
   try {
@@ -511,16 +533,14 @@ function changePassword(userId, newPassword) {
     const data = sheet.getDataRange().getValues();
     let rowIndex = -1;
 
-    // ค้นหา User (Column B คือ user_id)
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][1]) === String(userId)) {
-        rowIndex = i + 1; // Row ใน Sheet เริ่มที่ 1
+        rowIndex = i + 1; 
         break;
       }
     }
 
     if (rowIndex !== -1) {
-      // อัปเดตรหัสผ่าน (Column F คือ index 6)
       sheet.getRange(rowIndex, 6).setValue(newPassword);
       return JSON.stringify({ isOk: true });
     } else {
@@ -538,8 +558,8 @@ function changePassword(userId, newPassword) {
 function sendTelegramMsg(message) {
   // ************************************************
   // ใส่ค่าของคุณตรงนี้ (อย่าลืมเครื่องหมายลบที่ Chat ID)
-  const token = "XXXXX"; // <--- แก้ตรงนี้
-  const chatId = "XXXXX"; // <--- แก้ตรงนี้
+  const token = "xxxxx"; // <--- แก้ตรงนี้
+  const chatId = "xxxxx"; // <--- แก้ตรงนี้
   // ************************************************
 
   const url = "https://api.telegram.org/bot" + token + "/sendMessage";
