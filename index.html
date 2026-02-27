@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="th" class=""> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FineStamp - Lab Attendance</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d9488">
+    <meta name="application-name" content="FineStamp">
+    <meta name="apple-mobile-web-app-title" content="FineStamp">
+
+    <link rel="icon" type="image/png" href="https://img2.pic.in.th/FineStamp---Logo-bg-remove.png">
+    <link rel="apple-touch-icon" href="https://img2.pic.in.th/FineStamp---Logo-bg-remove.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151f2e' } 
+                    },
+                    animation: {
+                        'spin-fast': 'spin 0.7s linear infinite', 
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0d9488;
+            --primary-dark: #0f766e;
+            --base-scale: 1; /* ตัวแปรสำหรับปรับขนาดฟอนต์ */
+        }
+        
+        /* Apply Scaling to Body */
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f1f5f9;
+            overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-size: calc(16px * var(--base-scale)); /* Base Font Size Scalable */
+        }
+        
+        /* Force specific elements to respect scale */
+        h1, h2, h3, button, input, select, textarea, .font-heading { 
+            font-family: 'Prompt', sans-serif; 
+        }
+        
+        #bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background-image: url('https://www.transparenttextures.com/patterns/medical-icons-white.png');
+            background-repeat: repeat;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        html.dark #bg-layer {
+            opacity: 0.05; 
+            background-color: #0f172a; 
+        }
+
+        .modal { transition: opacity 0.2s ease, transform 0.2s ease; }
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        html.dark .glass-panel {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .touch-scroll {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        /* --- iOS INPUT FIX (CRITICAL) --- */
+        input[type="date"], input[type="time"] {
+            -webkit-appearance: none;
+            appearance: none;
+            min-width: 0;
+            background-color: transparent;
+            display: block; /* สำคัญสำหรับ iOS */
+            width: 100%;
+        }
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            width: 100%; 
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px; width: 20px;
+            border-radius: 50%;
+            background: #0d9488;
+            cursor: pointer;
+            margin-top: -8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        html.dark input[type=range]::-webkit-slider-runnable-track { background: #475569; }
+
+        /* --- VERTICAL SLIDER --- */
+        .v-slider-container {
+            position: relative;
+            width: 65px;
+            height: 180px; 
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+            touch-action: none;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        html.dark .v-slider-container { background-color: #334155; border-color: #475569; }
+
+        .v-slider-text {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            text-align: center; font-family: 'Prompt', sans-serif;
+            font-size: 13px; font-weight: 600; line-height: 1.4;
+            color: #64748b; pointer-events: none; z-index: 1; transition: opacity 0.2s;
+        }
+        html.dark .v-slider-text { color: #94a3b8; }
+
+        .v-slider-fill { position: absolute; left: 0; right: 0; z-index: 2; transition: height 0.1s; }
+        .v-slider-up .v-slider-fill { bottom: 0; height: 0; background: linear-gradient(to top, #6ee7b7, #059669); }
+        .v-slider-down .v-slider-fill { top: 0; height: 0; background: linear-gradient(to bottom, #fda4af, #e11d48); }
+
+        .v-slider-thumb {
+            position: absolute; width: 55px; height: 55px;
+            border-radius: 50%; background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 3; transition: transform 0.1s, background-color 0.3s;
+        }
+        .v-slider-thumb svg { color: #475569; transition: color 0.3s; }
+        .v-slider-up .v-slider-thumb { bottom: 4px; }
+        .v-slider-down .v-slider-thumb { top: 4px; }
+
+        /* --- SKELETON --- */
+        .skeleton {
+            background: #e2e8f0;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite linear;
+            border-radius: 4px;
+        }
+        html.dark .skeleton {
+            background: #334155;
+            background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* --- CALENDAR --- */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day {
+            height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            border-radius: 8px; font-size: 14px; padding-top: 4px; cursor: pointer; border: 1px solid transparent;
+            transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .calendar-day:hover { background-color: #cbd5e1; }
+        html.dark .calendar-day:hover { background-color: #475569; }
+        .day-weekend { background-color: #e2e8f0; color: #475569; }
+        html.dark .day-weekend { background-color: #334155; color: #94a3b8; }
+        .day-holiday { background-color: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+        html.dark .day-holiday { background-color: #7f1d1d !important; color: #fecaca !important; border-color: #991b1b !important; }
+        .holiday-label { font-size: 9px; line-height: 1; text-align: center; margin-top: 1px; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 2px; font-weight: bold; }
+        .calendar-day.today { background-color: #e0f2fe !important; color: #0284c7 !important; font-weight: bold; border: 2px solid #0ea5e9 !important; }
+        html.dark .calendar-day.today { background-color: #075985 !important; color: #e0f2fe !important; border-color: #38bdf8 !important; }
+        .calendar-day.has-duty { border-color: #94a3b8; }
+        .calendar-day.empty-day { background-color: transparent; border: none; cursor: default; }
+        .shift-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
+        .dot-blood { background-color: #16a34a; }
+        .dot-lab { background-color: #2563eb; }
+        .dot-hpv { background-color: #9333ea; }
+        
+        /* --- REPORT --- */
+        .sheet-page { width: 210mm; min-height: 297mm; background: white; padding: 15mm; margin: 0 auto 20px auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; position: relative; box-sizing: border-box; font-size: 12.5pt; color: #1e293b; }
+        .report-header { text-align: center; margin-bottom: 12px; padding-top: 5px; line-height: 1.4; }
+        .report-title { font-size: 20px; font-weight: bold; color: #1e293b; display: block; }
+        .report-subtitle { font-size: 16px; font-weight: normal; color: #475569; display: block; }
+        .report-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+        .report-table th { background-color: #f3f4f6; color: #0f172a; border-bottom: 2px solid #475569; padding: 6px 4px; font-weight: bold; font-size: 13pt; text-align: left; }
+        .report-table td { padding: 4px 4px; border-bottom: 1px solid #cbd5e1; line-height: 1.3; vertical-align: middle; }
+        
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+            body > *:not(#reportModal) { display: none !important; }
+            #bg-layer { display: none !important; }
+            #reportModal { display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: auto !important; background: white !important; z-index: 9999 !important; }
+            #reportControls, #reportFilters, #reportCloseBtn { display: none !important; }
+            #reportContent { background: white !important; padding: 0 !important; margin: 0 !important; display: block !important; overflow: visible !important; height: auto !important; }
+            .sheet-page { width: 100% !important; height: auto !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; page-break-after: always; }
+            .report-table th { background-color: #f3f4f6 !important; color: #000 !important; }
+        }
+        
+        #historyList::-webkit-scrollbar { width: 4px; }
+        #historyList::-webkit-scrollbar-track { background: #f1f5f9; }
+        #historyList::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    </style>
+</head>
+<body class="text-slate-800 dark:text-slate-200 dark:bg-slate-900 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <div id="bg-layer"></div>
+
+    <div id="loading" class="fixed inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center">
+        <div class="relative">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-slate-200 dark:border-slate-700 border-t-teal-600 dark:border-t-teal-400 will-change-transform"></div>
+        </div>
+        <p class="text-teal-700 dark:text-teal-400 font-semibold mt-4 animate-pulse">Processing...</p>
+    </div>
+
+    <div id="loginScreen" class="flex-grow flex items-center justify-center p-4 relative overflow-y-auto touch-scroll">
+        <div class="glass-panel w-full max-w-sm rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-8 z-10 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
+            <div class="text-center mb-6 mt-2">
+                <div class="relative h-32 mb-4 flex items-center justify-center">
+                    <img src="https://img2.pic.in.th/FineStamp---Logo-bg-remove.png" alt="FineStamp Logo" class="h-full w-auto rounded-2xl shadow-lg hover:scale-105 transition-transform duration-500">
+                </div>
+                <h1 class="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">FineStamp</h1>
+                <p class="text-slate-500 dark:text-slate-400 text-sm">Clinical Pathology & Medical Tech</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <input type="text" id="loginId" class="w-full pl-4 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 outline-none transition text-slate-800 dark:text-white" placeholder="User ID" required>
+                <input type="password" id="loginPass" class="w-full pl-4 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 outline-none transition text-slate-800 dark:text-white" placeholder="Password" required>
+                <button type="submit" class="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-teal-500/30 transition transform active:scale-95">เข้าสู่ระบบ</button>
+            </form>
+            <div class="mt-6 text-center">
+                <button onclick="$('#regModal').removeClass('hidden')" class="text-xs text-slate-500 dark:text-slate-400 font-semibold hover:text-teal-600 dark:hover:text-teal-400 transition uppercase tracking-wide">ลงทะเบียนเข้าใช้งาน</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainScreen" class="flex-grow flex-col hidden overflow-hidden relative">
+        <header class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm px-5 py-4 flex justify-between items-center z-10 border-b border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div onclick="openProfileModal()" class="relative group cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl overflow-hidden shadow-md border-2 border-white dark:border-slate-600 ring-2 ring-teal-500/20">
+                        <img id="userAvatarImg" src="" class="w-full h-full object-cover hidden">
+                        <div id="userAvatarText" class="w-full h-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white flex items-center justify-center font-bold text-xl">U</div>
+                    </div>
+                    <div class="absolute inset-0 bg-black/20 rounded-xl hidden group-hover:flex items-center justify-center text-white text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="font-bold text-slate-800 dark:text-white leading-tight truncate" id="userNameDisplay">User Name</h2>
+                    <p class="text-[11px] text-teal-600 dark:text-teal-400 font-medium whitespace-normal leading-tight" id="userGroupDisplay">Department</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="openCalendarModal()" class="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition shadow-sm border border-indigo-100 dark:border-indigo-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </button>
+                <button onclick="openReportModal()" class="w-10 h-10 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 rounded-xl flex items-center justify-center hover:bg-amber-100 dark:hover:bg-amber-900/50 transition shadow-sm border border-amber-100 dark:border-amber-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </button>
+                
+                <button onclick="openSettingsModal()" class="w-10 h-10 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm border border-slate-200 dark:border-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+
+                <button onclick="logout()" class="w-10 h-10 bg-slate-50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-900/30 transition shadow-sm border border-slate-100 dark:border-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow overflow-y-auto touch-scroll p-4 pb-4 max-w-3xl mx-auto w-full">
+            
+            <div class="grid grid-cols-2 gap-4 mb-6 mt-2">
+                <button onclick="openCheckInModal()" class="group relative overflow-hidden bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-teal-100 dark:bg-teal-900/30 rounded-bl-full -mr-8 -mt-8 opacity-50 group-hover:scale-110 transition"></div>
+                    <div class="flex flex-col items-center gap-3 relative z-10">
+                        <div class="bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 p-3 rounded-full group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                        </div>
+                        <span class="text-lg font-bold text-slate-700 dark:text-slate-200 group-hover:text-teal-700 dark:group-hover:text-teal-300">เข้างาน</span>
+                    </div>
+                </button>
+                <button onclick="openCheckOutModal()" class="group relative overflow-hidden bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                     <div class="absolute top-0 right-0 w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-bl-full -mr-8 -mt-8 opacity-50 group-hover:scale-110 transition"></div>
+                    <div class="flex flex-col items-center gap-3 relative z-10">
+                        <div class="bg-rose-100 dark:bg-rose-900/50 text-rose-500 dark:text-rose-400 p-3 rounded-full group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </div>
+                        <span class="text-lg font-bold text-slate-700 dark:text-slate-200 group-hover:text-rose-700 dark:group-hover:text-rose-300">ออกงาน</span>
+                    </div>
+                </button>
+            </div>
+
+            <div id="adminPanelBtn" class="hidden mb-6">
+                <button onclick="openReportModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-3 transition transform active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="font-bold text-lg">สรุปรายเดือน (Admin)</span>
+                </button>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        บันทึกล่าสุด
+                    </h3>
+                    <button onclick="loadHistory()" class="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 font-semibold bg-teal-50 dark:bg-teal-900/30 px-3 py-1.5 rounded-lg border border-teal-100 dark:border-teal-800 transition">Refresh</button>
+                </div>
+                <div id="historyList" class="divide-y divide-slate-100 dark:divide-slate-700 overflow-y-auto touch-scroll max-h-[400px] overscroll-contain">
+                    <div class="p-8 text-center text-slate-400 text-sm">กำลังโหลดข้อมูล...</div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 text-center z-10">
+             <div class="container mx-auto px-4">
+                <p class="text-[10px] text-slate-400 font-medium">&copy; 2026 FineStamp <span class="mx-1">•</span> Developed by <span class="text-teal-600 dark:text-teal-400">P. PURICUMPEE</span></p>
+            </div>
+        </footer>
+    </div>
+    
+    <div id="settingsModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm p-0 shadow-2xl overflow-hidden animate-slide-up">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    ตั้งค่า (Settings)
+                </h3>
+                <button onclick="$('#settingsModal').addClass('hidden')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-5 space-y-5">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-3">การใช้งาน</h4>
+                    
+                    <div class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-3 flex justify-between items-center shadow-sm mb-3">
+                        <div class="flex items-center gap-3">
+                             <div class="bg-teal-50 dark:bg-teal-900/30 p-2 rounded-lg text-teal-600 dark:text-teal-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" /></svg>
+                            </div>
+                            <div>
+                                <span class="font-bold text-slate-700 dark:text-slate-200 block text-sm">ความถนัดของมือ</span>
+                                <span class="text-[10px] text-slate-400">ปุ่มสไลด์ซ้าย/ขวา</span>
+                            </div>
+                        </div>
+                        <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg gap-1">
+                            <button id="btnLeftHand" onclick="setHandedness('left')" class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-500 transition-all duration-300">ซ้าย</button>
+                            <button id="btnRightHand" onclick="setHandedness('right')" class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-500 bg-white shadow-sm text-teal-600 transition-all duration-300">ขวา</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-3 flex justify-between items-center shadow-sm">
+                        <div class="flex items-center gap-3">
+                             <div class="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
+                            </div>
+                            <div>
+                                <span class="font-bold text-slate-700 dark:text-slate-200 block text-sm">Dark Mode</span>
+                                <span class="text-[10px] text-slate-400">ธีมสีเข้มสบายตา</span>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="darkModeToggle" class="sr-only peer" onchange="toggleDarkMode()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 dark:peer-focus:ring-teal-800 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-3">การแสดงผล</h4>
+                    <div class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-bold text-slate-700 dark:text-slate-200 text-sm">ขนาดตัวอักษร</span>
+                            <span id="fontScaleDisplay" class="text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded">ปกติ</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-slate-400">A</span>
+                            <input type="range" id="fontScaleRange" min="1" max="5" step="1" value="3" class="flex-grow h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-600" oninput="updateFontScale(this.value)">
+                            <span class="text-lg font-bold text-slate-600 dark:text-slate-300">A</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                     <h4 class="text-xs font-bold text-slate-400 uppercase mb-3">บัญชีผู้ใช้</h4>
+                     <button onclick="openChangePassword()" class="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl p-3 flex justify-between items-center shadow-sm active:scale-95 transition">
+                         <div class="flex items-center gap-3">
+                             <div class="bg-orange-50 dark:bg-orange-900/30 p-2 rounded-lg text-orange-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                             </div>
+                             <div class="text-left">
+                                 <span class="font-bold text-slate-700 dark:text-slate-200 block text-sm">เปลี่ยนรหัสผ่าน</span>
+                                 <span class="text-[10px] text-slate-400">แก้ไขรหัสผ่านส่วนตัว</span>
+                             </div>
+                         </div>
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                     </button>
+                </div>
+                
+                <div class="text-center pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <div class="flex justify-center mb-2">
+                        <img src="https://img2.pic.in.th/FineStamp---Logo-bg-remove.png" class="h-12 w-auto opacity-80 grayscale hover:grayscale-0 transition duration-500 cursor-pointer">
+                    </div>
+                    <p class="text-xs font-bold text-slate-500 dark:text-slate-400">FineStamp v1.2.4</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Developed by <span class="text-teal-600 dark:text-teal-400 font-semibold">P. PURICUMPEE</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4 text-center">เปลี่ยนรูปโปรไฟล์</h3>
+            <div class="mb-4 flex justify-center">
+                <div class="w-32 h-32 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 border-4 border-white dark:border-slate-600 shadow-lg relative">
+                    <img id="previewImg" class="w-full h-full object-cover hidden">
+                    <div id="previewPlaceholder" class="w-full h-full flex items-center justify-center text-slate-300 text-4xl font-bold">?</div>
+                </div>
+            </div>
+            <input type="file" id="profileInput" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 mb-4 dark:file:bg-teal-900 dark:file:text-teal-300">
+            <div class="flex gap-2">
+                <button onclick="$('#profileModal').addClass('hidden')" class="flex-1 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">ยกเลิก</button>
+                <button onclick="uploadProfile()" class="flex-1 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-bold">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendarModal" class="fixed inset-0 z-[70] hidden bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    ตารางเวร
+                </h3>
+                <button onclick="$('#calendarModal').addClass('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+            </div>
+            <div class="flex justify-between items-center mb-4 bg-slate-50 dark:bg-slate-700 p-2 rounded-lg">
+                <button onclick="changeMonth(-1)" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full"><svg class="w-5 h-5 text-slate-500 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                <span id="calMonthYear" class="font-bold text-slate-700 dark:text-white">Month Year</span>
+                <button onclick="changeMonth(1)" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full"><svg class="w-5 h-5 text-slate-500 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-400 font-bold mb-2"><div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div></div>
+            <div id="calendarGrid" class="calendar-grid flex-grow p-1 touch-scroll overflow-y-auto"></div>
+            <div id="calendarLegend" class="mt-4 flex gap-2 text-[10px] text-slate-500 justify-center flex-wrap"></div>
+        </div>
+    </div>
+
+    <div id="calShiftModal" class="fixed inset-0 z-[80] hidden bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-4 w-64 animate-slide-up">
+            <h4 class="text-center font-bold text-slate-700 dark:text-white mb-3" id="calSelectedDate">...</h4>
+            <div class="space-y-2" id="calShiftOptions"></div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="$('#calShiftModal').addClass('hidden')" class="flex-1 py-1.5 text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-300 rounded hover:bg-slate-200">ปิด</button>
+                <button onclick="saveShift()" class="flex-1 py-1.5 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="regModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl transform scale-100 transition-all border border-slate-100 dark:border-slate-700">
+            <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><span class="w-1 h-6 bg-teal-500 rounded-full"></span> ลงทะเบียน</h3>
+            <form id="regForm" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" name="first_name" placeholder="ชื่อ" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:text-white" required>
+                    <input type="text" name="last_name" placeholder="นามสกุล" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:text-white" required>
+                </div>
+                <div class="space-y-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
+                    <p class="text-xs font-bold text-slate-500 uppercase">กลุ่มงาน</p>
+                    <label class="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-600 cursor-pointer hover:border-teal-300 transition">
+                        <input type="checkbox" name="work_group" value="พยาธิวิทยากายวิภาค" class="rounded text-teal-600 focus:ring-teal-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">พยาธิวิทยากายวิภาค</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-600 cursor-pointer hover:border-teal-300 transition">
+                        <input type="checkbox" name="work_group" value="พยาธิวิทยาคลินิกและเทคนิคการแพทย์" class="rounded text-teal-600 focus:ring-teal-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">พยาธิวิทยาคลินิกและเทคนิคการแพทย์</span>
+                    </label>
+                </div>
+                <input type="text" name="user_id" placeholder="กำหนด User ID" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:text-white" required>
+                <input type="password" name="password" placeholder="กำหนดรหัสผ่าน" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:text-white" required>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="$('#regModal').addClass('hidden')" class="flex-1 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20">ยืนยัน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="checkInModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-slide-up relative">
+            <button onclick="$('#checkInModal').addClass('hidden')" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 text-2xl">&times;</button>
+            <div class="mb-4">
+                <span class="bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Check In</span>
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">บันทึกเวลาเข้า</h3>
+            </div>
+            <form id="checkInForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Date</label>
+                        <input type="date" id="inDate" class="w-full bg-transparent font-semibold text-slate-700 dark:text-white outline-none" required>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Time</label>
+                        <input type="time" id="inTime" class="w-full bg-transparent font-semibold text-slate-700 dark:text-white outline-none" required>
+                    </div>
+                </div>
+                
+                <div id="checkInActionArea" class="flex gap-4 pt-2 w-full transition-all duration-300 items-stretch">
+                    <div id="checkInOptionsArea" class="w-[70%] space-y-2 flex flex-col justify-center">
+                        <p class="text-xs font-bold text-slate-400 uppercase hidden" id="checkInWorkTitle">เลือกประเภทงาน</p>
+                        <div id="checkInWorkOptionsInner" class="grid grid-cols-1 gap-2 hidden">
+                             <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-teal-400 has-[:checked]:bg-teal-50 dark:has-[:checked]:bg-teal-900/30 has-[:checked]:border-teal-500 transition-all option-cp">
+                                <input type="radio" name="workTypeIn" value="เจาะเลือดเช้า" class="w-5 h-5 text-teal-600 focus:ring-teal-500 shrink-0">
+                                <div>
+                                    <span class="text-[13px] block font-bold text-slate-700 dark:text-slate-300 group-hover:text-teal-700 dark:group-hover:text-teal-300 leading-tight">เจาะเลือดเช้า</span>
+                                    <span class="text-[10px] text-teal-600 dark:text-teal-400 font-medium leading-none">Auto ออกงาน 08:00</span>
+                                </div>
+                            </label>
+                            <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-teal-400 has-[:checked]:bg-teal-50 dark:has-[:checked]:bg-teal-900/30 has-[:checked]:border-teal-500 transition-all option-cp">
+                                <input type="radio" name="workTypeIn" value="เวรแล็บ" class="w-5 h-5 text-teal-600 focus:ring-teal-500 shrink-0">
+                                <span class="text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-teal-700 dark:group-hover:text-teal-300 leading-tight">เวรแล็บ</span>
+                            </label>
+                             <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-teal-400 has-[:checked]:bg-teal-50 dark:has-[:checked]:bg-teal-900/30 has-[:checked]:border-teal-500 transition-all option-ap">
+                                <input type="radio" name="workTypeIn" value="เวร HPV" class="w-5 h-5 text-teal-600 focus:ring-teal-500 shrink-0">
+                                <span class="text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-teal-700 dark:group-hover:text-teal-300 leading-tight">เวร HPV</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="checkInSliderArea" class="w-[30%] flex justify-center items-center">
+                        <div id="checkInSlider" class="v-slider-container v-slider-up">
+                            <div class="v-slider-text">เลื่อนขึ้น<br>เพื่อ<br>ยืนยัน</div>
+                            <div class="v-slider-fill"></div>
+                            <div class="v-slider-thumb">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="checkOutModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-slide-up relative">
+             <button onclick="$('#checkOutModal').addClass('hidden')" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 text-2xl">&times;</button>
+            <div class="mb-4">
+                 <span class="bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Check Out</span>
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">บันทึกเวลาออก</h3>
+            </div>
+            <form id="checkOutForm" class="space-y-4">
+                <div class="bg-orange-50/50 dark:bg-orange-900/30 p-3 rounded-2xl border border-orange-100/50 dark:border-orange-800">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-orange-400 uppercase">เวลาเข้างาน</label>
+                        <span id="autoFillBadge" class="hidden text-[9px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold">AUTO-FILL 16:00</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="relative w-full min-w-0">
+                            <input type="date" id="outInDate" class="w-full bg-white dark:bg-slate-700 border border-orange-100 dark:border-slate-600 rounded-lg px-1 py-1.5 text-[11px] text-center text-slate-600 dark:text-white focus:border-orange-300 outline-none block">
+                        </div>
+                        <div class="relative w-full min-w-0">
+                            <input type="time" id="outInTime" class="w-full bg-white dark:bg-slate-700 border border-orange-100 dark:border-slate-600 rounded-lg px-1 py-1.5 text-[11px] text-center text-slate-600 dark:text-white focus:border-orange-300 outline-none block">
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                         <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Date Now</label>
+                        <input type="date" id="outDate" class="w-full bg-transparent font-semibold text-slate-800 dark:text-white outline-none" required>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                         <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Time Now</label>
+                        <input type="time" id="outTime" class="w-full bg-transparent font-semibold text-slate-800 dark:text-white outline-none" required>
+                    </div>
+                </div>
+                
+                <div id="checkOutActionArea" class="flex gap-4 pt-2 w-full transition-all duration-300 items-stretch">
+                    <div id="checkOutOptionsArea" class="w-[70%] space-y-2 flex flex-col justify-center">
+                        <p class="text-xs font-bold text-slate-400 uppercase hidden" id="checkOutWorkTitle">เลือกประเภทงาน</p>
+                        <div id="checkOutWorkOptionsInner" class="grid grid-cols-1 gap-2 hidden">
+                            <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 dark:has-[:checked]:bg-rose-900/30 has-[:checked]:border-rose-500 transition-all option-cp">
+                                <input type="radio" name="workTypeOut" value="เจาะเลือดเช้า" class="w-5 h-5 text-rose-600 focus:ring-rose-500 shrink-0">
+                                <span class="text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-rose-700 dark:group-hover:text-rose-300 leading-tight">เจาะเลือดเช้า</span>
+                            </label>
+                            <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 dark:has-[:checked]:bg-rose-900/30 has-[:checked]:border-rose-500 transition-all option-cp">
+                                <input type="radio" name="workTypeOut" value="เวรแล็บ" class="w-5 h-5 text-rose-600 focus:ring-rose-500 shrink-0">
+                                <div>
+                                    <span class="text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-rose-700 dark:group-hover:text-rose-300 block leading-tight">เวรแล็บ</span>
+                                    <span class="text-[9px] text-rose-600 dark:text-rose-400 font-medium check-in-notice hidden leading-none mt-1">ถ้าไม่มีข้อมูลเข้า จะตั้ง 16:00</span>
+                                </div>
+                            </label>
+                             <label class="group border border-slate-200 dark:border-slate-600 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:border-rose-400 has-[:checked]:bg-rose-50 dark:has-[:checked]:bg-rose-900/30 has-[:checked]:border-rose-500 transition-all option-ap">
+                                <input type="radio" name="workTypeOut" value="เวร HPV" class="w-5 h-5 text-rose-600 focus:ring-rose-500 shrink-0">
+                                 <div>
+                                    <span class="text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-rose-700 dark:group-hover:text-rose-300 block leading-tight">เวร HPV</span>
+                                    <span class="text-[9px] text-rose-600 dark:text-rose-400 font-medium check-in-notice hidden leading-none mt-1">ถ้าไม่มีข้อมูลเข้า จะตั้ง 16:00</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="checkOutSliderArea" class="w-[30%] flex justify-center items-center">
+                        <div id="checkOutSlider" class="v-slider-container v-slider-down">
+                            <div class="v-slider-text">เลื่อนลง<br>เพื่อ<br>ยืนยัน</div>
+                            <div class="v-slider-fill"></div>
+                            <div class="v-slider-thumb">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reportModal" class="fixed inset-0 z-[60] hidden bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-0 sm:p-4">
+        <div class="bg-white dark:bg-slate-800 w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh] sm:rounded-2xl flex flex-col shadow-2xl">
+            <div id="reportControls" class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900 sm:rounded-t-2xl">
+                <h3 class="text-xl font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    สรุปรายเดือน
+                </h3>
+                <button id="reportCloseBtn" onclick="$('#reportModal').addClass('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div id="reportFilters" class="p-4 bg-indigo-50/50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800 flex flex-wrap gap-3 items-center">
+                <select id="reportGroup" class="px-3 py-2 rounded-lg border border-indigo-200 text-indigo-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[200px]">
+                    <option value="" disabled selected>เลือกกลุ่มงาน</option>
+                </select>
+                <div id="reportUserContainer" class="hidden">
+                    <select id="reportUser" class="px-3 py-2 rounded-lg border border-indigo-200 text-indigo-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="ALL">รวมทุกคน</option>
+                    </select>
+                </div>
+                <select id="reportMonth" class="px-3 py-2 rounded-lg border border-indigo-200 text-indigo-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option><option value="3">มีนาคม</option>
+                    <option value="4">เมษายน</option><option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+                    <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option><option value="9">กันยายน</option>
+                    <option value="10">ตุลาคม</option><option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+                </select>
+                <select id="reportYear" class="px-3 py-2 rounded-lg border border-indigo-200 text-indigo-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                <button onclick="fetchReport()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 shadow-md">ค้นหา</button>
+                <button onclick="exportToExcel()" class="ml-auto bg-green-600 text-white hover:bg-green-700 font-medium flex items-center gap-1 px-3 py-2 rounded-lg shadow-sm mr-2">Export Excel</button>
+                <button onclick="window.print()" class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-white border border-indigo-100 px-3 py-2 rounded-lg shadow-sm">พิมพ์รายงาน</button>
+            </div>
+
+            <div id="reportContent" class="flex-grow overflow-y-auto touch-scroll pb-24 bg-slate-50 dark:bg-slate-900 flex flex-col items-center py-4 space-y-4">
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-center text-slate-400 w-full max-w-4xl">
+                    กรุณาเลือกกลุ่มงาน/เดือน/ปี และกดค้นหา
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let userRecords = [];
+        let dutyRecords = [];
+        let currentCalDate = new Date();
+        const DEPT_AP = "พยาธิวิทยากายวิภาค";
+        const DEPT_CP = "พยาธิวิทยาคลินิกและเทคนิคการแพทย์";
+        
+        let globalReportData = []; 
+        let globalReportMonth = "";
+        let globalReportYear = "";
+
+        const thaiHolidays = {
+            "2026-01-01": "วันขึ้นปีใหม่", "2026-03-03": "วันมาฆบูชา", "2026-04-06": "วันจักรี",
+            "2026-04-13": "วันสงกรานต์", "2026-04-14": "วันสงกรานต์", "2026-04-15": "วันสงกรานต์",
+            "2026-05-04": "วันฉัตรมงคล", "2026-06-01": "วันหยุดชดเชยวันวิสาขบูชา", "2026-06-03": "วันเฉลิมฯ พระราชินี",
+            "2026-07-28": "วันเฉลิมฯ ร.10", "2026-07-29": "วันอาสาฬหบูชา", "2026-07-30": "วันเข้าพรรษา",
+            "2026-08-12": "วันแม่แห่งชาติ", "2026-10-13": "วันนวมินทรมหาราช", "2026-10-23": "วันปิยมหาราช",
+            "2026-12-07": "วันหยุดชดเชย วันพ่อแห่งชาติ", "2026-12-10": "วันรัฐธรรมนูญ", "2026-12-31": "วันสิ้นปี",
+            "2027-01-01": "วันขึ้นปีใหม่", "2027-02-22": "วันมาฆบูชา", "2027-04-06": "วันจักรี",
+            "2027-04-13": "วันสงกรานต์", "2027-04-14": "วันสงกรานต์", "2027-04-15": "วันสงกรานต์",
+            "2027-05-01": "วันแรงงาน", "2027-05-04": "วันฉัตรมงคล", "2027-05-20": "วันวิสาขบูชา",
+            "2027-06-03": "วันเฉลิมฯ พระราชินี", "2027-07-19": "วันอาสาฬหบูชา", "2027-07-28": "วันเฉลิมฯ ร.10",
+            "2027-08-12": "วันแม่แห่งชาติ", "2027-10-13": "วันนวมินทรมหาราช", "2027-10-23": "วันปิยมหาราช",
+            "2027-12-05": "วันพ่อแห่งชาติ", "2027-12-10": "วันรัฐธรรมนูญ", "2027-12-31": "วันสิ้นปี"
+        };
+
+        $(document).ready(() => {
+            const saved = localStorage.getItem('fineStampUser');
+            if(saved) {
+                currentUser = JSON.parse(saved);
+                showMainScreen();
+            }
+            // Populate Year
+            const yearSelect = $('#reportYear');
+            const currentYearAD = new Date().getFullYear();
+            const startYearAD = 2026;
+            const endYearAD = Math.max(currentYearAD + 3, startYearAD + 1);
+            for (let y = startYearAD; y <= endYearAD; y++) {
+                yearSelect.append(new Option(y + 543, y));
+            }
+            if (currentYearAD >= startYearAD) yearSelect.val(currentYearAD); else yearSelect.val(startYearAD);
+            $('#reportMonth').val(new Date().getMonth() + 1);
+
+            // Set Preferences
+            let userHandedness = localStorage.getItem('fineStampHandedness') || 'right';
+            setHandedness(userHandedness);
+            
+            // Set Dark Mode
+            const savedTheme = localStorage.getItem('fineStampTheme');
+            if(savedTheme === 'dark') {
+                $('html').addClass('dark');
+                $('#darkModeToggle').prop('checked', true);
+            }
+            
+            // Set Font Scale
+            const savedFontScale = localStorage.getItem('fineStampFontScale') || 3;
+            $('#fontScaleRange').val(savedFontScale);
+            updateFontScale(savedFontScale);
+        });
+
+        // --- SETTINGS FUNCTIONS ---
+        function openSettingsModal() {
+            $('#settingsModal').removeClass('hidden');
+        }
+
+        function setHandedness(hand) {
+            localStorage.setItem('fineStampHandedness', hand);
+            
+            if (hand === 'left') {
+                $('#btnLeftHand').removeClass('bg-transparent text-slate-500').addClass('bg-white shadow-sm text-teal-600');
+                $('#btnRightHand').removeClass('bg-white shadow-sm text-teal-600').addClass('bg-transparent text-slate-500');
+                $('#checkInActionArea').addClass('flex-row-reverse');
+                $('#checkOutActionArea').addClass('flex-row-reverse');
+            } else {
+                $('#btnRightHand').removeClass('bg-transparent text-slate-500').addClass('bg-white shadow-sm text-teal-600');
+                $('#btnLeftHand').removeClass('bg-white shadow-sm text-teal-600').addClass('bg-transparent text-slate-500');
+                $('#checkInActionArea').removeClass('flex-row-reverse');
+                $('#checkOutActionArea').removeClass('flex-row-reverse');
+            }
+        }
+        
+        function toggleDarkMode() {
+            const isDark = $('#darkModeToggle').is(':checked');
+            if(isDark) {
+                $('html').addClass('dark');
+                localStorage.setItem('fineStampTheme', 'dark');
+            } else {
+                $('html').removeClass('dark');
+                localStorage.setItem('fineStampTheme', 'light');
+            }
+        }
+        
+        function updateFontScale(val) {
+            const levels = {
+                '1': { scale: 0.85, label: 'เล็ก' },
+                '2': { scale: 0.925, label: 'ค่อนข้างเล็ก' },
+                '3': { scale: 1, label: 'ปกติ' },
+                '4': { scale: 1.075, label: 'ค่อนข้างใหญ่' },
+                '5': { scale: 1.15, label: 'ใหญ่' }
+            };
+            
+            const selected = levels[val];
+            if(selected) {
+                document.documentElement.style.setProperty('--base-scale', selected.scale);
+                $('#fontScaleDisplay').text(selected.label);
+                localStorage.setItem('fineStampFontScale', val);
+            }
+        }
+        
+        function openChangePassword() {
+            Swal.fire({
+                title: 'เปลี่ยนรหัสผ่านใหม่',
+                html: `
+                    <input type="password" id="swal-pass1" class="swal2-input" placeholder="รหัสผ่านใหม่">
+                    <input type="password" id="swal-pass2" class="swal2-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง">
+                `,
+                confirmButtonText: 'บันทึก',
+                focusConfirm: false,
+                showCancelButton: true,
+                cancelButtonText: 'ยกเลิก',
+                preConfirm: () => {
+                    const p1 = document.getElementById('swal-pass1').value;
+                    const p2 = document.getElementById('swal-pass2').value;
+                    if (!p1 || !p2) Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบ');
+                    else if (p1 !== p2) Swal.showValidationMessage('รหัสผ่านไม่ตรงกัน');
+                    return p1;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#loading').removeClass('hidden').addClass('flex');
+                    google.script.run.withSuccessHandler(res => {
+                        $('#loading').addClass('hidden').removeClass('flex');
+                        const response = JSON.parse(res);
+                        if(response.isOk) {
+                            Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success');
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                        }
+                    }).changePassword(currentUser.user_id, result.value);
+                }
+            });
+        }
+
+        const getNow = () => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hour = String(d.getHours()).padStart(2, '0');
+            const minute = String(d.getMinutes()).padStart(2, '0');
+            return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}` };
+        };
+
+        const isDualUser = () => {
+            if(!currentUser) return false;
+            return currentUser.work_groups.includes(DEPT_AP) && currentUser.work_groups.includes(DEPT_CP);
+        }
+
+        // --- AUTH & COMMON ---
+        $('#loginForm').submit(function(e) {
+            e.preventDefault();
+            $('#loading').removeClass('hidden').addClass('flex');
+            google.script.run.withSuccessHandler(res => {
+                $('#loading').addClass('hidden').removeClass('flex');
+                const response = JSON.parse(res);
+                if(response.isOk) {
+                    currentUser = response.user;
+                    localStorage.setItem('fineStampUser', JSON.stringify(currentUser));
+                    showMainScreen();
+                } else {
+                    Swal.fire({icon: 'error', title: 'Login Failed', text: response.message, confirmButtonColor: '#0d9488'});
+                }
+            }).loginUser($('#loginId').val(), $('#loginPass').val());
+        });
+
+        function logout() {
+            Swal.fire({
+                title: 'ออกจากระบบ', icon: 'question', showCancelButton: true,
+                confirmButtonColor: '#0d9488', cancelButtonColor: '#cbd5e1',
+                confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    currentUser = null;
+                    localStorage.removeItem('fineStampUser');
+                    $('#mainScreen').removeClass('flex').addClass('hidden');
+                    $('#loginScreen').removeClass('hidden'); 
+                    $('#loginForm')[0].reset();
+                }
+            });
+        }
+
+        function showMainScreen() {
+            $('#loginScreen').addClass('hidden');
+            $('#mainScreen').removeClass('hidden').addClass('flex');
+            $('#userNameDisplay').text(`${currentUser.first_name} ${currentUser.last_name}`);
+            $('#userGroupDisplay').text(currentUser.work_groups);
+            
+            // Profile Image Logic
+            if (currentUser.profile_image) {
+                $('#userAvatarText').addClass('hidden');
+                $('#userAvatarImg').attr('src', currentUser.profile_image).removeClass('hidden');
+            } else {
+                $('#userAvatarImg').addClass('hidden');
+                $('#userAvatarText').removeClass('hidden').text(currentUser.first_name.charAt(0));
+            }
+            
+            loadHistory();
+        }
+
+        // --- REGISTER FUNCTION ---
+        $('#regForm').submit(function(e){
+            e.preventDefault();
+            const groups = [];
+            $('input[name="work_group"]:checked').each(function() { groups.push($(this).val()); });
+            
+            if(groups.length === 0) {
+                Swal.fire({icon:'warning', title:'ข้อมูลไม่ครบ', text:'กรุณาเลือกสังกัดกลุ่มงาน', confirmButtonColor: '#0d9488'});
+                return;
+            }
+
+            const payload = {
+                id: 'U_' + Date.now(),
+                first_name: $('input[name="first_name"]').val(),
+                last_name: $('input[name="last_name"]').val(),
+                user_id: $('input[name="user_id"]').val(),
+                password: $('input[name="password"]').val(),
+                work_groups: groups.join(',')
+            };
+
+            $('#loading').removeClass('hidden').addClass('flex');
+            google.script.run.withSuccessHandler(res => {
+                $('#loading').addClass('hidden').removeClass('flex');
+                const response = JSON.parse(res);
+                if(response.isOk) {
+                    $('#regModal').addClass('hidden');
+                    Swal.fire({icon:'success', title:'สำเร็จ', text:'ลงทะเบียนเรียบร้อย', confirmButtonColor: '#0d9488'});
+                    $('#regForm')[0].reset();
+                } else {
+                    Swal.fire({icon:'error', title:'Error', text:response.message, confirmButtonColor: '#0d9488'});
+                }
+            }).registerUser(JSON.stringify(payload));
+        });
+
+        // --- CALENDAR LOGIC ---
+        function openCalendarModal() {
+            currentCalDate = new Date();
+            renderCalendar();
+            
+            // Dynamic Legend
+            const legendContainer = $('#calendarLegend');
+            legendContainer.empty();
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+
+            if (isCP) {
+                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-600"></span> เจาะเลือด</span>');
+                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600"></span> แล็บ</span>');
+            }
+            if (isAP) {
+                legendContainer.append('<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-600"></span> HPV</span>');
+            }
+
+            $('#calendarModal').removeClass('hidden');
+        }
+
+        function changeMonth(step) {
+            currentCalDate.setMonth(currentCalDate.getMonth() + step);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const m = currentCalDate.getMonth();
+            const y = currentCalDate.getFullYear();
+            const firstDay = new Date(y, m, 1).getDay();
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            
+            const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            $('#calMonthYear').text(`${thaiMonths[m]} ${y + 543}`);
+
+            $('#loading').removeClass('hidden').addClass('flex');
+            google.script.run.withSuccessHandler(res => {
+                $('#loading').addClass('hidden').removeClass('flex');
+                dutyRecords = JSON.parse(res);
+                drawGrid(firstDay, daysInMonth, m, y);
+            }).getMonthDuty(currentUser.user_id, m + 1, y);
+        }
+
+        function drawGrid(firstDay, daysInMonth, m, y) {
+            const grid = $('#calendarGrid');
+            grid.empty();
+            
+            // Empty slots for start
+            for (let i = 0; i < firstDay; i++) {
+                grid.append('<div class="calendar-day empty-day"></div>');
+            }
+
+            const today = new Date();
+            const isCurrentMonth = today.getMonth() === m && today.getFullYear() === y;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const duty = dutyRecords.find(r => r.date === dateKey);
+                const isToday = isCurrentMonth && today.getDate() === d;
+                
+                // Determine Day Type (Weekend/Holiday)
+                const currentDayOfWeek = new Date(y, m, d).getDay();
+                let dayClass = "";
+                let holidayHtml = "";
+                
+                // 1. Weekend Logic
+                if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
+                    dayClass = "day-weekend";
+                }
+                
+                // 2. Holiday Logic (Overrides weekend color due to CSS specificity or ordering, but adding class anyway)
+                if (thaiHolidays[dateKey]) {
+                    dayClass += " day-holiday"; // Append class
+                    holidayHtml = `<div class="holiday-label">${thaiHolidays[dateKey]}</div>`;
+                }
+
+                let dotsHtml = '';
+                if (duty) {
+                    duty.shifts.forEach(s => {
+                        let colorClass = 'bg-gray-400';
+                        if(s === 'เจาะเลือดเช้า') colorClass = 'dot-blood';
+                        else if(s === 'เวรแล็บ') colorClass = 'dot-lab';
+                        else if(s === 'เวร HPV') colorClass = 'dot-hpv';
+                        dotsHtml += `<div class="shift-dot ${colorClass}"></div>`;
+                    });
+                }
+
+                const dayEl = $(`
+                    <div class="calendar-day ${dayClass} ${isToday ? 'today' : ''} ${duty ? 'has-duty' : ''}" onclick="openShiftSelect('${dateKey}')">
+                        <span>${d}</span>
+                        ${holidayHtml}
+                        <div class="flex gap-1 flex-wrap justify-center">${dotsHtml}</div>
+                    </div>
+                `);
+                grid.append(dayEl);
+            }
+
+            // Fill remaining slots to maintain 42 grid cells (6 rows * 7 cols) for consistent height
+            const totalCellsFilled = firstDay + daysInMonth;
+            const remainingCells = 42 - totalCellsFilled;
+            for(let i=0; i<remainingCells; i++) {
+                 grid.append('<div class="calendar-day empty-day"></div>');
+            }
+        }
+
+        function openShiftSelect(dateStr) {
+            $('#calSelectedDate').text(dateStr);
+            const container = $('#calShiftOptions');
+            container.empty();
+            
+            const duty = dutyRecords.find(r => r.date === dateStr);
+            const currentShifts = duty ? duty.shifts : [];
+
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+
+            if (isCP) {
+                container.append(createCheckbox('เจาะเลือดเช้า', currentShifts));
+                container.append(createCheckbox('เวรแล็บ', currentShifts));
+            }
+            if (isAP) {
+                container.append(createCheckbox('เวร HPV', currentShifts));
+            }
+
+            $('#calShiftModal').removeClass('hidden');
+            $('#calShiftModal').data('date', dateStr);
+        }
+
+        function createCheckbox(label, currentShifts) {
+            const isChecked = currentShifts.includes(label) ? 'checked' : '';
+            return `
+                <label class="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <input type="checkbox" value="${label}" ${isChecked} class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                    <span class="text-sm text-slate-700 dark:text-slate-300">${label}</span>
+                </label>
+            `;
+        }
+
+        function saveShift() {
+            const dateStr = $('#calShiftModal').data('date');
+            const selected = [];
+            $('#calShiftOptions input:checked').each(function() {
+                selected.push($(this).val());
+            });
+
+            const payload = { user_id: currentUser.user_id, date: dateStr, shifts: selected };
+            
+            $('#calShiftModal').addClass('hidden');
+            $('#loading').removeClass('hidden').addClass('flex');
+            
+            google.script.run.withSuccessHandler(res => {
+                const response = JSON.parse(res);
+                if(response.isOk) {
+                    renderCalendar();
+                } else {
+                    Swal.fire({icon:'error', title:'Error', text:response.message});
+                    $('#loading').addClass('hidden').removeClass('flex');
+                }
+            }).saveDutyRecord(JSON.stringify(payload));
+        }
+
+        // --- PROFILE IMAGE ---
+        function openProfileModal() {
+            $('#profileInput').val(''); 
+
+            // ตรวจสอบรูป User
+            if (currentUser && currentUser.profile_image) {
+                $('#previewImg').attr('src', currentUser.profile_image).removeClass('hidden');
+                $('#previewPlaceholder').addClass('hidden');
+            } else {
+                $('#previewImg').addClass('hidden');
+                $('#previewPlaceholder').removeClass('hidden');
+            }
+
+            $('#profileModal').removeClass('hidden');
+        }
+
+        $('#profileInput').change(function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#previewPlaceholder').addClass('hidden');
+                    $('#previewImg').attr('src', e.target.result).removeClass('hidden');
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        function uploadProfile() {
+            const file = $('#profileInput')[0].files[0];
+            if (!file) { Swal.fire('กรุณาเลือกรูปภาพ'); return; }
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function() {
+                const base64 = reader.result;
+                $('#loading').removeClass('hidden').addClass('flex');
+                google.script.run.withSuccessHandler(res => {
+                    $('#loading').addClass('hidden').removeClass('flex');
+                    const response = JSON.parse(res);
+                    if (response.isOk) {
+                        currentUser.profile_image = response.url;
+                        localStorage.setItem('fineStampUser', JSON.stringify(currentUser));
+                        showMainScreen();
+                        $('#profileModal').addClass('hidden');
+                        Swal.fire({icon:'success', title:'บันทึกรูปโปรไฟล์เรียบร้อย', showConfirmButton: false, timer: 1500});
+                    } else {
+                        Swal.fire({icon:'error', title:'Error', text: response.message});
+                    }
+                }).saveProfileImage(currentUser.user_id, base64);
+            }
+        }
+
+        // --- REPORT LOGIC ---
+        function openReportModal() {
+            const groupSelect = $('#reportGroup');
+            groupSelect.empty();
+            groupSelect.append('<option value="" disabled selected>เลือกกลุ่มงาน</option>');
+            
+            if (currentUser.work_groups.includes(DEPT_AP)) {
+                groupSelect.append(new Option(DEPT_AP, DEPT_AP));
+            }
+            if (currentUser.work_groups.includes(DEPT_CP)) {
+                groupSelect.append(new Option(DEPT_CP, DEPT_CP));
+            }
+            if (groupSelect.children('option').length === 2) {
+                groupSelect.find('option:eq(1)').prop('selected', true);
+                groupSelect.trigger('change');
+            }
+
+            const userSelectContainer = $('#reportUserContainer');
+            const userSelect = $('#reportUser');
+            
+            if (currentUser.role === 'Admin') {
+                userSelectContainer.removeClass('hidden');
+            } else {
+                userSelectContainer.addClass('hidden');
+                userSelect.empty(); 
+            }
+
+            $('#reportModal').removeClass('hidden');
+        }
+
+        $('#reportGroup').change(function() {
+            if (currentUser.role !== 'Admin') return;
+            
+            const selectedGroup = $(this).val();
+            const userSelect = $('#reportUser');
+            
+            userSelect.empty();
+            userSelect.append('<option value="ALL">กำลังโหลด...</option>');
+            userSelect.prop('disabled', true);
+
+            google.script.run.withSuccessHandler(res => {
+                const users = JSON.parse(res);
+                userSelect.empty();
+                userSelect.append('<option value="ALL">รวมทุกคน</option>');
+                users.forEach(u => {
+                    userSelect.append(new Option(u.name, u.user_id));
+                });
+                userSelect.prop('disabled', false);
+            }).getUsersByGroup(selectedGroup);
+        });
+        
+        function fetchReport() {
+            const group = $('#reportGroup').val();
+            if (!group) { Swal.fire('กรุณาเลือกกลุ่มงาน'); return; }
+
+            const m = $('#reportMonth').val();
+            const y = $('#reportYear').val();
+            
+            let userIdToFilter = "";
+            if (currentUser.role === 'Admin') {
+                userIdToFilter = $('#reportUser').val() || "ALL";
+            } else {
+                userIdToFilter = currentUser.user_id; 
+            }
+
+            $('#loading').removeClass('hidden').addClass('flex');
+            google.script.run.withSuccessHandler(res => {
+                $('#loading').addClass('hidden').removeClass('flex');
+                const response = JSON.parse(res);
+                if (response.isOk) { 
+                    globalReportData = response.data;
+                    globalReportMonth = $("#reportMonth option:selected").text();
+                    globalReportYear = parseInt(y) + 543;
+
+                    renderReportPages(response.data, m, y); 
+                } 
+                else { Swal.fire({icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message}); }
+            }).getMonthlyReport(m, y, group, userIdToFilter);
+        }
+
+        function renderReportPages(data, m, y) {
+            const container = $('#reportContent');
+            container.empty();
+            
+            const thaiMonth = $("#reportMonth option:selected").text();
+            const thaiYear = parseInt(y) + 543;
+            const fullDateStr = `ประจำเดือน ${thaiMonth} พ.ศ. ${thaiYear}`;
+
+            if (data.length === 0) {
+                container.html('<div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-center text-slate-400 w-full max-w-4xl">ไม่พบข้อมูลตามเงื่อนไข</div>');
+                return;
+            }
+
+            const itemsPerPage = 30;
+            const totalPages = Math.ceil(data.length / itemsPerPage);
+
+            for (let i = 0; i < totalPages; i++) {
+                const start = i * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageData = data.slice(start, end);
+
+                const pageHtml = `
+                    <div class="sheet-page">
+                        <div class="report-header">
+                            <span class="report-title">รายงานสรุปเวลาปฏิบัติงานรายเดือน</span>
+                            <span class="report-subtitle">${fullDateStr}</span>
+                        </div>
+                        
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">วัน เดือน ปี</th>
+                                    <th style="width: 30%;">ชื่อ สกุล</th>
+                                    <th style="width: 15%; text-align: center;">เวลามา</th>
+                                    <th style="width: 15%; text-align: center;">เวลากลับ</th>
+                                    <th style="width: 20%; text-align: right;">ลายมือชื่อ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pageData.map(row => `
+                                    <tr>
+                                        <td>${row.date}</td>
+                                        <td>${row.name}</td>
+                                        <td style="text-align: center;" class="text-teal-700 font-medium">${row.in}</td>
+                                        <td style="text-align: center;" class="text-rose-700 font-medium">${row.out}</td>
+                                        <td style="text-align: right;" class="text-slate-400">${row.name.split(' ')[0]}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                container.append(pageHtml);
+            }
+        }
+
+        function exportToExcel() {
+            if (!globalReportData || globalReportData.length === 0) {
+                Swal.fire('ไม่มีข้อมูลให้ Export', 'กรุณากดค้นหาข้อมูลก่อน', 'warning');
+                return;
+            }
+
+            const title1 = ["รายงานสรุปเวลาปฏิบัติงานรายเดือน"];
+            const title2 = [`ประจำเดือน ${globalReportMonth} พ.ศ. ${globalReportYear}`];
+            const header = ["วัน เดือน ปี", "ชื่อ สกุล", "เวลามา", "เวลากลับ", "ลายมือชื่อ"];
+
+            const dataRows = globalReportData.map(row => {
+                return [
+                    row.date,          // Col A: วันที่
+                    row.name,          // Col B: ชื่อ
+                    row.in,            // Col C: เวลามา
+                    row.out,           // Col D: เวลากลับ
+                    row.name.split(' ')[0] // Col E: ลายเซ็น (ชื่อต้น)
+                ];
+            });
+
+            const finalData = [
+                title1,
+                title2,
+                [], 
+                header,
+                ...dataRows
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(finalData);
+
+            if(!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }); 
+            ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }); 
+
+            ws['!cols'] = [
+                { wch: 20 }, // A
+                { wch: 25 }, // B
+                { wch: 10 }, // C
+                { wch: 10 }, // D
+                { wch: 15 }  // E
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Report");
+            
+            const filename = `FineStamp_Report_${globalReportMonth}_${globalReportYear}.xlsx`;
+            XLSX.writeFile(wb, filename);
+        }
+
+        // --- CHECK IN/OUT & HISTORY ---
+        
+        function getSkeletonHTML() {
+            let html = '';
+            for(let i=0; i<5; i++) {
+                html += `
+                    <div class="p-4 border-b border-slate-50 dark:border-slate-700 flex justify-between items-center">
+                        <div class="w-2/3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="h-4 w-24 skeleton"></div>
+                                <div class="h-4 w-12 skeleton rounded-full"></div>
+                            </div>
+                            <div class="h-3 w-32 skeleton"></div>
+                        </div>
+                        <div class="h-6 w-16 skeleton rounded"></div>
+                    </div>
+                `;
+            }
+            return html;
+        }
+
+        function loadHistory() {
+            $('#historyList').html(getSkeletonHTML());
+            
+            const btn = $('button[onclick="loadHistory()"]');
+            btn.html('<svg class="animate-spin h-4 w-4 text-teal-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>');
+            btn.prop('disabled', true);
+
+            const now = new Date();
+            const m = now.getMonth() + 1;
+            const y = now.getFullYear();
+
+            google.script.run.withSuccessHandler(res => {
+                userRecords = JSON.parse(res);
+                renderHistory(); 
+                
+                setTimeout(() => {
+                    btn.html('Refresh');
+                    btn.prop('disabled', false);
+                }, 300);
+            }).getUserRecords(currentUser.user_id, m, y);
+        }
+
+        function renderHistory() {
+            const list = $('#historyList');
+            list.empty();
+            if(userRecords.length === 0) {
+                list.html('<div class="p-8 text-center text-slate-400">ไม่พบประวัติในเดือนนี้</div>');
+                return;
+            }
+            userRecords.forEach(rec => {
+                const workTypeBadge = rec.work_type ? `<span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">${rec.work_type}</span>` : '';
+                const clockOutDisplay = rec.clock_out_time 
+                    ? `<span class="text-teal-600 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded border border-teal-100 dark:border-teal-800">${rec.clock_out_time}</span>` 
+                    : `<span class="text-orange-400 text-xs italic">Pending</span>`;
+
+                const html = `
+                    <div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700 last:border-0 flex justify-between items-center animate-[fadeIn_0.3s_ease-out]">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-slate-700 dark:text-slate-200">${rec.clock_in_date}</span>
+                                ${workTypeBadge}
+                            </div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">
+                                เข้า: <span class="font-semibold text-slate-600 dark:text-slate-300">${rec.clock_in_time}</span>
+                                <span class="mx-1 text-slate-300 dark:text-slate-600">|</span>
+                                ออก: <span class="font-semibold text-slate-600 dark:text-slate-300">${rec.clock_out_time || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                           ${clockOutDisplay}
+                        </div>
+                    </div>
+                `;
+                list.append(html);
+            });
+        }
+
+        // --- VERTICAL SLIDER LOGIC ---
+        function setupVerticalSlider(sliderId, formId, direction) {
+            const container = document.getElementById(sliderId);
+            if(!container) return;
+            const form = $(formId);
+
+            // Clean up old events to prevent memory leak and double-fire
+            if(container.cleanup) container.cleanup();
+
+            const thumb = container.querySelector('.v-slider-thumb');
+            const fill = container.querySelector('.v-slider-fill');
+            const text = container.querySelector('.v-slider-text');
+
+            let isDragging = false;
+            let startY = 0;
+            let currentY = 0;
+            let maxSlide = 0;
+
+            function resetSlider() {
+                isDragging = false;
+                thumb.style.transform = `translateY(0)`;
+                thumb.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                thumb.style.backgroundColor = 'white';
+                thumb.querySelector('svg').style.color = '#475569';
+                fill.style.height = '0px';
+                fill.style.transition = 'height 0.3s ease-out';
+                text.style.opacity = 1;
+            }
+
+            function onStart(e) {
+                isDragging = true;
+                startY = e.type.includes('mouse') ? e.pageY : e.touches[0].clientY;
+                let containerHeight = container.offsetHeight;
+                maxSlide = containerHeight - thumb.offsetHeight - 8; // 8 is top+bottom padding (4px each)
+                
+                thumb.style.transition = 'none';
+                fill.style.transition = 'none';
+            }
+
+            function onMove(e) {
+                if (!isDragging) return;
+                const pageY = e.type.includes('mouse') ? e.pageY : e.touches[0].clientY;
+                let moveY = pageY - startY;
+
+                if (direction === 'up') {
+                    // moveY is negative when moving up
+                    if (moveY > 0) moveY = 0;
+                    if (moveY < -maxSlide) moveY = -maxSlide;
+                } else {
+                    // moveY is positive when moving down
+                    if (moveY < 0) moveY = 0;
+                    if (moveY > maxSlide) moveY = maxSlide;
+                }
+
+                thumb.style.transform = `translateY(${moveY}px)`;
+                
+                const progress = Math.abs(moveY) / maxSlide;
+                fill.style.height = `${Math.abs(moveY) + (thumb.offsetHeight/2)}px`; 
+                text.style.opacity = 1 - (progress * 1.5);
+                currentY = moveY;
+            }
+
+            function onEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+
+                if (Math.abs(currentY) >= maxSlide - 10) { 
+                    const finalPos = direction === 'up' ? -maxSlide : maxSlide;
+                    thumb.style.transform = `translateY(${finalPos}px)`;
+                    fill.style.height = '100%';
+                    
+                    if(direction === 'up') {
+                        thumb.style.backgroundColor = '#059669'; 
+                    } else {
+                        thumb.style.backgroundColor = '#e11d48'; 
+                    }
+                    thumb.querySelector('svg').style.color = 'white';
+                    
+                    setTimeout(() => {
+                        form.trigger('submit');
+                        setTimeout(resetSlider, 1000); 
+                    }, 250);
+                } else {
+                    resetSlider();
+                }
+            }
+
+            thumb.addEventListener('mousedown', onStart);
+            thumb.addEventListener('touchstart', onStart, {passive: true});
+            
+            const globalOnMove = (e) => { if(isDragging) onMove(e); };
+            const globalOnEnd = (e) => { if(isDragging) onEnd(e); };
+
+            document.addEventListener('mousemove', globalOnMove);
+            document.addEventListener('touchmove', globalOnMove, {passive: true});
+            document.addEventListener('mouseup', globalOnEnd);
+            document.addEventListener('touchend', globalOnEnd);
+            
+            // Attached cleanup function to the container element
+            container.cleanup = () => {
+                thumb.removeEventListener('mousedown', onStart);
+                thumb.removeEventListener('touchstart', onStart);
+                document.removeEventListener('mousemove', globalOnMove);
+                document.removeEventListener('touchmove', globalOnMove);
+                document.removeEventListener('mouseup', globalOnEnd);
+                document.removeEventListener('touchend', globalOnEnd);
+            };
+        }
+
+        function openCheckInModal() {
+            const now = getNow();
+            $('#inDate').val(now.date);
+            $('#inTime').val(now.time);
+            
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+            $('.option-cp').toggle(isCP);
+            $('.option-ap').toggle(isAP);
+            
+            if(isCP || isAP) {
+                $('#checkInWorkTitle, #checkInWorkOptionsInner').removeClass('hidden');
+                $('input[name="workTypeIn"]').prop('checked', false); 
+                if (isCP) $('input[name="workTypeIn"][value="เจาะเลือดเช้า"]').prop('checked', true);
+                else if (isAP) $('input[name="workTypeIn"][value="เวร HPV"]').prop('checked', true);
+            } else {
+                $('#checkInWorkTitle, #checkInWorkOptionsInner').addClass('hidden');
+            }
+            
+            const oldSlider = document.getElementById('checkInSlider');
+            if(oldSlider.cleanup) oldSlider.cleanup();
+            const newSlider = oldSlider.cloneNode(true);
+            oldSlider.parentNode.replaceChild(newSlider, oldSlider);
+            
+            setupVerticalSlider('checkInSlider', '#checkInForm', 'up');
+
+            $('#checkInModal').removeClass('hidden');
+        }
+
+        function openCheckOutModal() {
+            const now = getNow();
+            $('#outDate').val(now.date);
+            $('#outTime').val(now.time);
+
+            const todayRecord = userRecords.find(r => r.clock_in_date === now.date && (!r.clock_out_time || r.clock_out_time === ""));
+            if(todayRecord) {
+                $('#outInDate').val(todayRecord.clock_in_date);
+                $('#outInTime').val(todayRecord.clock_in_time);
+                $('#checkOutForm').data('recordId', todayRecord.id); 
+                $('#autoFillBadge').addClass('hidden');
+                $('.check-in-notice').addClass('hidden');
+            } else {
+                $('#outInDate').val(now.date);
+                $('#outInTime').val('16:00');
+                $('#checkOutForm').data('recordId', null); 
+                $('#autoFillBadge').removeClass('hidden');
+                $('.check-in-notice').removeClass('hidden');
+            }
+
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+            $('.option-cp').toggle(isCP);
+            $('.option-ap').toggle(isAP);
+            
+            if(isCP || isAP) {
+                $('#checkOutWorkTitle, #checkOutWorkOptionsInner').removeClass('hidden');
+                 $('input[name="workTypeOut"]').prop('checked', false);
+                 if (isCP) $('input[name="workTypeOut"][value="เจาะเลือดเช้า"]').prop('checked', true);
+                 else if (isAP) $('input[name="workTypeOut"][value="เวร HPV"]').prop('checked', true);
+            } else {
+                $('#checkOutWorkTitle, #checkOutWorkOptionsInner').addClass('hidden');
+            }
+
+            const oldSlider = document.getElementById('checkOutSlider');
+            if(oldSlider.cleanup) oldSlider.cleanup();
+            const newSlider = oldSlider.cloneNode(true);
+            oldSlider.parentNode.replaceChild(newSlider, oldSlider);
+            
+            setupVerticalSlider('checkOutSlider', '#checkOutForm', 'down');
+
+            $('#checkOutModal').removeClass('hidden');
+        }
+
+        $('#checkInForm').submit(function(e) {
+            e.preventDefault();
+            const inDate = $('#inDate').val();
+            const inTime = $('#inTime').val();
+            let outDate = "";
+            let outTime = "";
+            let workType = "";
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+            if(isCP || isAP) {
+                workType = $('input[name="workTypeIn"]:checked').val();
+                if(workType === "เจาะเลือดเช้า") { outDate = inDate; outTime = "08:00"; }
+            }
+            saveRecord({ clock_in_date: inDate, clock_in_time: inTime, clock_out_date: outDate, clock_out_time: outTime, work_type: (workType === "ปกติ") ? "" : workType }, '#checkInModal');
+        });
+
+        $('#checkOutForm').submit(function(e) {
+            e.preventDefault();
+            const recordId = $('#checkOutForm').data('recordId'); 
+            let workType = "";
+            const isCP = currentUser.work_groups.includes(DEPT_CP);
+            const isAP = currentUser.work_groups.includes(DEPT_AP);
+            if(isCP || isAP) workType = $('input[name="workTypeOut"]:checked').val();
+            const payload = {
+                id: recordId, 
+                clock_in_date: $('#outInDate').val(),
+                clock_in_time: $('#outInTime').val(),
+                clock_out_date: $('#outDate').val(),
+                clock_out_time: $('#outTime').val(),
+                work_type: (workType === "ปกติ") ? "" : workType
+            };
+            saveRecord(payload, '#checkOutModal');
+        });
+
+        $('input[name="workTypeOut"]').change(function() {
+            const type = $(this).val();
+            const recordId = $('#checkOutForm').data('recordId');
+            if (!recordId && (type === 'เวรแล็บ' || type === 'เวร HPV')) {
+                const now = getNow();
+                $('#outInDate').val(now.date);
+                $('#outInTime').val('16:00');
+                $('#autoFillBadge').removeClass('hidden');
+            }
+        });
+
+        function saveRecord(data, modalId) {
+            $('#loading').removeClass('hidden').addClass('flex');
+            
+            const fullPayload = {
+                ...data,
+                id: data.id || 'R_' + Date.now(),
+                user_id: currentUser.user_id,
+                first_name: currentUser.first_name,
+                last_name: currentUser.last_name,
+                work_groups: currentUser.work_groups
+            };
+
+            google.script.run.withSuccessHandler(res => {
+                $('#loading').addClass('hidden').removeClass('flex');
+                const response = JSON.parse(res);
+                if(response.isOk) {
+                    $(modalId).addClass('hidden');
+                    setTimeout(() => {
+                        Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1000 });
+                        loadHistory();
+                    }, 300);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
+                }
+            }).saveTimeRecord(JSON.stringify(fullPayload));
+        }
+    </script>
+</body>
+</html>
